@@ -1,0 +1,99 @@
+#!/usr/bin/env python3
+
+
+import argparse
+import os
+import sys
+import glob
+
+import rlsecure
+
+from cimessages import Messages
+
+
+def __expand_specs(specs: str) -> str:
+    files = glob.glob(specs, recursive=True)
+    if len(files) > 1:
+        raise RuntimeError(f'Path spec "{specs}" resolves to more than one file!')
+    if len(files) < 1:
+        raise RuntimeError(f'Path spec "{specs}" doesn\'t resolve to any file!')
+    return files[0]
+
+
+def main() -> int:
+
+    parser = argparse.ArgumentParser(
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        prog="rl-scan",
+        description="ReversingLabs: rl-scan CLI (Preview)\n\n"
+        "Extended product documentation is available at: https://docs.secure.software",
+        epilog="Environment variables:\n"
+        "  RLSECURE_ENCODED_LICENSE - Base64 encoded license file contents\n"
+        "  RLSECURE_SITE_KEY        - Site activation key for licensing\n"
+        "  RLSECURE_PROXY_SERVER    - Server URL for local proxy\n"
+        "  RLSECURE_PROXY_PORT      - Network port for local proxy\n"
+        "  RLSECURE_PROXY_USER      - User name for proxy authentication\n"
+        "  RLSECURE_PROXY_PASSWORD  - Password for proxy authentication\n",
+    )
+
+    parser.add_argument(
+        "--package-path",
+        required=True,
+        help="Path to the package file you want to scan (supports wildcards)",
+    )
+    parser.add_argument(
+        "--report-path",
+        required=True,
+        help="Path to a directory where reports should be saved",
+    )
+    parser.add_argument(
+        "--report-format",
+        default="all",
+        help="A comma-separated list of report formats to generate. Supported values: cyclonedx, sarif, rl-html, rl-json or all.",
+    )
+    parser.add_argument(
+        "--message-reporter",
+        choices=["teamcity", "text"],
+        default="text",
+        help="Processing status message format",
+    )
+
+    params = parser.parse_args()
+
+    # if params.report_path object exists it should be an empty directory
+    if os.path.exists(params.report_path) and not (
+        os.path.isdir(params.report_path) and not os.listdir(params.report_path)
+    ):
+        raise RuntimeError("--report-path needs to point to an empty directory!")
+
+    reporter = Messages.create(params.message_reporter)
+
+    if not rlsecure.check_if_installed():
+        with reporter.progress_block("Installing rl-secure"):
+            rlsecure.install()
+
+    # initialize rl-store
+    with reporter.progress_block("Initializing rl-secure store"):
+        rlsecure.init_store()
+
+    # process target package
+    target_purl = "project/package@target"
+    path = __expand_specs(params.package_path)
+    with reporter.progress_block("Scanning software package"):
+        reporter.info(f"Package path: {path}")
+        rlsecure.scan(target_purl, path)
+
+    # generate report
+    with reporter.progress_block("Generating report(s)"):
+        result = rlsecure.generate_report(target_purl, params.report_path, params.report_format)
+
+    reporter.scan_result(result.passed, result.msg)
+    return 0 if result.passed else 1
+
+
+if __name__ == "__main__":
+    try:
+        sys.exit(main())
+    except Exception as e:
+        print(f"Error: {str(e)}")
+        sys.exit(1)
