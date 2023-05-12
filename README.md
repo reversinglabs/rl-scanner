@@ -1,6 +1,6 @@
 # reversinglabs/rl-scanner
 
-![Header image](armando-docker.png)
+![Header image](https://github.com/reversinglabs/rl-scanner/raw/main/armando-docker.png)
 
 `reversinglabs/rl-scanner` is the official Docker image created by ReversingLabs for users who want to deploy the `rl-secure` solution in ephemeral environments and integrate it with their CI/CD tools.
 
