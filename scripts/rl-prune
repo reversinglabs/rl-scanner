@@ -1,0 +1,88 @@
+#!/usr/bin/env python3
+
+
+import argparse
+import sys
+
+import rlsecure
+from cimessages import Messages
+
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        prog="rl-scan",
+        description="ReversingLabs: rl-prune CLI (Preview)\n\n"
+        "Extended product documentation is available at: https://docs.secure.software",
+        epilog="Environment variables:\n"
+        "  RLSECURE_ENCODED_LICENSE - Base64 encoded license file contents\n"
+        "  RLSECURE_SITE_KEY        - Site activation key for licensing\n"
+        "  RLSECURE_PROXY_SERVER    - Server URL for local proxy\n"
+        "  RLSECURE_PROXY_PORT      - Network port for local proxy\n"
+        "  RLSECURE_PROXY_USER      - User name for proxy authentication\n"
+        "  RLSECURE_PROXY_PASSWORD  - Password for proxy authentication\n",
+    )
+
+    parser.add_argument(
+        "--rl-store",
+        required=True,
+        help="Path to an existing rl-store",
+    )
+    parser.add_argument(
+        "--purl",
+        required=True,
+        help="Package URL to prune (format [pkg:namespace/]<project>[</package>[<@version>]])",
+    )
+    parser.add_argument(
+        "--before-date",
+        required=False,
+        help="Remove everything matching the package URL and created before the specified timestamp (ISO-8601)",
+    )
+    parser.add_argument(
+        "--after-date",
+        required=False,
+        help="Remove everything matching the package URL and created after the specified timestamp (ISO-8601)",
+    )
+    parser.add_argument(
+        "--days-older",
+        required=False,
+        help="Remove everything matching the package URL and older than the specified number of days",
+    )
+    parser.add_argument(
+        "--hours-older",
+        required=False,
+        help="Remove everything matching the package URL and older than the specified number of hours",
+    )
+    parser.add_argument(
+        "--message-reporter",
+        choices=["teamcity", "text"],
+        default="text",
+        help="Processing status message format",
+    )
+
+    params = parser.parse_args()
+
+    reporter = Messages.create(params.message_reporter)
+
+    # install rl-secure
+    if not rlsecure.check_if_installed():
+        with reporter.progress_block("Installing rl-secure"):
+            rlsecure.install()
+
+    # set rl-store
+    rlsecure.use_store(params.rl_store)
+
+    # prune
+    with reporter.progress_block("Pruning repository"):
+        rlsecure.prune(params.purl, params.before_date, params.after_date, params.days_older, params.hours_older)
+
+    return 0
+
+
+if __name__ == "__main__":
+    try:
+        sys.exit(main())
+    except Exception as e:
+        print(f"Error: {str(e)}")
+        sys.exit(1)

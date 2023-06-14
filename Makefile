@@ -67,3 +67,9 @@ clean:
 push:
 	docker push $(IMAGE_NAME)
 	docker pushrm $(IMAGE_NAME)
+
+tag:
+	echo "not yet functional"
+	exit 1
+	git tag -a v1.0.0 -m "version v1.0.0"
+	git push --tags

@@ -7,7 +7,6 @@ import sys
 import glob
 
 import rlsecure
-
 from cimessages import Messages
 
 
@@ -37,19 +36,44 @@ def main() -> int:
     )
 
     parser.add_argument(
+        "--rl-store",
+        required=False,
+        help="Path to an existing rl-store",
+    )
+    parser.add_argument(
+        "--purl",
+        required=False,
+        help="Package URL used for the scan (format [pkg:namespace/]<project></package><@version>)",
+    )
+    parser.add_argument(
         "--package-path",
         required=True,
         help="Path to the package file you want to scan (supports wildcards)",
     )
     parser.add_argument(
+        "--replace",
+        action="store_true",
+        help="Replace the existing package version within the rl-store",
+    )
+    parser.add_argument(
+        "--diff-with",
+        required=False,
+        help="Previously analyzed package version to compare against the selected package",
+    )
+    parser.add_argument(
+        "--rl-level",
+        required=False,
+        help="Specifies the rl-level used for the selected package scanning",
+    )
+    parser.add_argument(
         "--report-path",
         required=True,
-        help="Path to a directory where reports should be saved",
+        help="Path to a directory where the selected reports will be saved",
     )
     parser.add_argument(
         "--report-format",
         default="all",
-        help="A comma-separated list of report formats to generate. Supported values: cyclonedx, sarif, rl-html, rl-json or all.",
+        help="A comma-separated list of report formats to generate. Supported values: spdx, cyclonedx, sarif, rl-html, rl-json, all",
     )
     parser.add_argument(
         "--message-reporter",
@@ -59,6 +83,20 @@ def main() -> int:
     )
 
     params = parser.parse_args()
+
+    # if custom store is specified, PURL should be provided as well and level should not be used
+    if params.rl_store is not None:
+        if params.purl is None:
+            raise RuntimeError("--purl must be specified when using an existing rl-store")
+        if params.rl_level is not None:
+            raise RuntimeError("--rl-store and --rl-level parameters can't be used together")
+
+    # if diff is performed, PURL and store should be provided as well and rl-level is not compatible
+    if params.diff_with is not None:
+        if params.purl is None:
+            raise RuntimeError("--purl should be specified when generating a difference report")
+        if params.rl_store is None:
+            raise RuntimeError("--rl-store should be specified when generating a difference report")
 
     # if params.report_path object exists it should be an empty directory
     if os.path.exists(params.report_path) and not (
@@ -72,23 +110,30 @@ def main() -> int:
         with reporter.progress_block("Installing rl-secure"):
             rlsecure.install()
 
-    # initialize rl-store
-    with reporter.progress_block("Initializing rl-secure store"):
-        rlsecure.init_store()
+    # set rl-store
+    if params.rl_store is not None:
+        rlsecure.use_store(params.rl_store)
+    else:
+        # initialize temporary store
+        with reporter.progress_block("Initializing rl-secure store"):
+            rlsecure.init_store(params.rl_level)
 
     # process target package
-    target_purl = "project/package@target"
+    target_purl = params.purl if params.purl is not None else "project/package@target"
     path = __expand_specs(params.package_path)
     with reporter.progress_block("Scanning software package"):
         reporter.info(f"Package path: {path}")
-        rlsecure.scan(target_purl, path)
+        rlsecure.scan(target_purl, path, params.replace, params.diff_with)
 
     # generate report
     with reporter.progress_block("Generating report(s)"):
-        result = rlsecure.generate_report(target_purl, params.report_path, params.report_format)
+        result = rlsecure.generate_report(target_purl, params.report_path, params.report_format, params.diff_with)
 
-    reporter.scan_result(result.passed, result.msg)
-    return 0 if result.passed else 1
+    should_report_result = reporter.scan_result(result.passed, result.msg)
+    if should_report_result:
+        return 0 if result.passed else 1
+    else:
+        return 0
 
 
 if __name__ == "__main__":

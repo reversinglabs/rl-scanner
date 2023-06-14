@@ -6,7 +6,7 @@ from typing import (
     List,
 )
 
-SCANNER_COMMANDS: List[str] = ["rl-scan"]
+SCANNER_COMMANDS: List[str] = ["rl-scan", "rl-prune"]
 
 
 def usage() -> None:

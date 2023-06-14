@@ -25,11 +25,12 @@ class TextMessages(Messages):
     def info(self, msg: str) -> None:
         print(f"Info: {msg}", flush=True)
 
-    def scan_result(self, passed: bool, msg: str) -> None:
+    def scan_result(self, passed: bool, msg: str) -> bool:
         if passed:
             print("Scan result: PASS", flush=True)
         else:
             print(f"Scan result: {msg}... FAIL", flush=True)
+        return True
 
     @contextmanager
     def progress_block(self, msg: str) -> Any:
@@ -68,11 +69,12 @@ class TeamCityMesages(Messages):
     def info(self, msg: str) -> None:
         print(TeamCityMesages.service_message("message", {"text": msg}), flush=True)
 
-    def scan_result(self, passed: bool, msg: str) -> None:
+    def scan_result(self, passed: bool, msg: str) -> bool:
         if passed:
             self.__build_status("Scan result: PASS")
         else:
             self.__build_problem(f"Scan result: {msg}... FAIL")
+        return False
 
     @contextmanager
     def progress_block(self, msg: str) -> Any:

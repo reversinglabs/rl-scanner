@@ -6,6 +6,7 @@ import re
 import shutil
 import subprocess
 from distutils.dir_util import copy_tree
+from pathlib import Path
 from typing import (
     Optional,
     Any,
@@ -15,6 +16,10 @@ from typing import (
 __INSTALL_LOCATION = "/tmp/__rlsecure"
 __RLREPORT_LOCATION = "/tmp/__rlsecure-report"
 __RLSTORE = "/tmp/__rlstore"
+
+
+def __is_empty_dir(path: str) -> bool:
+    return not any(Path(path).iterdir())
 
 
 def __run(*args: Any, **kwargs: Any) -> Any:
@@ -57,9 +62,23 @@ def install() -> None:
     __run(args, check=True)
 
 
-def init_store() -> None:
-    os.makedirs(__RLSTORE)
-    __run([__executable(), "init", __RLSTORE], check=True)
+def use_store(store_path: str) -> None:
+    global __RLSTORE
+    __RLSTORE = store_path
+    if not os.path.isdir(__RLSTORE):
+        raise RuntimeError(f"'{__RLSTORE}' is not a directory")
+    if not os.path.isdir(os.path.join(__RLSTORE, ".rl-secure")):
+        init_store()
+
+
+def init_store(level: Optional[str] = None) -> None:
+    os.makedirs(__RLSTORE, exist_ok=True)
+    if not __is_empty_dir(__RLSTORE):
+        raise RuntimeError(f"'{__RLSTORE}' is not an empty directory")
+    cmd = [__executable(), "init", __RLSTORE]
+    if level is not None:
+        cmd.append(f"--rl-level={level}")
+    __run(cmd, check=True)
 
 
 def __run_scan(args: List[str], **kwargs: Any) -> None:
@@ -67,8 +86,37 @@ def __run_scan(args: List[str], **kwargs: Any) -> None:
     __run(cmd + args, **kwargs)
 
 
-def scan(purl: str, path: str) -> None:
-    __run_scan([f"--purl={purl}", f"--file-path={path}"], check=True)
+def scan(
+    purl: str,
+    path: str,
+    replace: bool,
+    base_version: Optional[str] = None,
+) -> None:
+    args = [f"--purl={purl}", f"--file-path={path}"]
+    if replace:
+        args.append("--replace")
+    if base_version is not None:
+        args.append(f"--sync-with={base_version}")
+    __run_scan(args, check=True)
+
+
+def prune(
+    purl: str,
+    before_date: Optional[str],
+    after_date: Optional[str],
+    days_older: Optional[int],
+    hours_older: Optional[int],
+) -> None:
+    cmd = [__executable(), "prune", "--silent", f"--rl-store={__RLSTORE}", f"--purl={purl}"]
+    if before_date is not None:
+        cmd.append(f"--before-date={before_date}")
+    if after_date is not None:
+        cmd.append(f"--after-date={after_date}")
+    if days_older is not None:
+        cmd.append(f"--days-older={days_older}")
+    if hours_older is not None:
+        cmd.append(f"--hours-older={hours_older}")
+    __run(cmd, check=True)
 
 
 class ScanResult:
