@@ -20,7 +20,10 @@ IMAGE_NAME		:= $(IMAGE_BASE):$(BUILD_VERSION)
 ARTIFACT_OK		:=	vim
 ARTIFACT_ERR	:=	eicarcom2.zip
 
-all: clean build testFail test_ok test_err
+all: clean format build testFail test_ok test_err
+
+format:
+	./reformat-code.sh
 
 # build a new docker image from the Dockerfile generated
 build:

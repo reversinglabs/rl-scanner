@@ -11,8 +11,7 @@ class Messages:
     def create(cls, name: str) -> Any:
         if name == "teamcity":
             return TeamCityMesages()
-        else:
-            return TextMessages()
+        return TextMessages()
 
 
 class TextMessages(Messages):
@@ -42,9 +41,9 @@ class TextMessages(Messages):
 class TeamCityMesages(Messages):
     @classmethod
     def service_message(cls, name: str, msg: Any) -> str:
-        def escape(m: str) -> str:
+        def escape(msg: str) -> str:
             escape_map: Dict[str, str] = {"'": "|'", "|": "||", "\n": "|n", "\r": "|r", "[": "|[", "]": "|]"}
-            return "".join(escape_map.get(x, x) for x in m)
+            return "".join(escape_map.get(x, x) for x in msg)
 
         if isinstance(msg, dict):
             msg_content: List[str] = [f"{k}='{escape(v)}'" for k, v in msg.items()]

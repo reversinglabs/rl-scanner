@@ -1,12 +1,11 @@
-#!/usr/bin/env python3
-
-
 import os
 import re
+import glob
 import shutil
 import subprocess
 from distutils.dir_util import copy_tree
 from pathlib import Path
+from urllib.parse import urlsplit, parse_qs, urlunsplit, urlencode, SplitResult
 from typing import (
     Optional,
     Any,
@@ -123,7 +122,6 @@ class ScanResult:
     def __init__(self, passed: bool, msg: str) -> None:
         self.passed = passed
         self.msg = msg
-        return
 
 
 def generate_report(
@@ -148,33 +146,66 @@ def generate_report(
         cmd.append(f"--diff-with={base_version}")
     __run(cmd, check=True)
 
-    if base_version is not None:
-        os.rename(
-            os.path.join(__RLREPORT_LOCATION, f"rl-html-diff-with-{base_version}"),
-            os.path.join(__RLREPORT_LOCATION, "rl-html"),
-        )
+    purl_query = parse_qs(urlsplit(purl).query)
+    is_repro = "build" in purl_query and "repro" in purl_query["build"]
+
+    for report_dir in glob.iglob(os.path.join(__RLREPORT_LOCATION, "rl-html-diff-with-*")):
+        if os.path.isdir(report_dir):
+            os.rename(
+                report_dir,
+                os.path.join(__RLREPORT_LOCATION, "rl-html"),
+            )
+            break
 
     # copy report to desired location
     os.makedirs(rpt_path, exist_ok=True)
     copy_tree(__RLREPORT_LOCATION, rpt_path)
 
     # collect scan results
-    cmd = [
-        __executable(),
-        "status",
-        "--return-status",
-        "--no-color",
-        f"--purl={purl}",
-        f"--rl-store={__RLSTORE}",
-    ]
-    status = __run(cmd, stdout=subprocess.PIPE, encoding="utf-8")
+    if not is_repro:
+        # normal scan
+        cmd = [
+            __executable(),
+            "status",
+            "--return-status",
+            "--no-color",
+            f"--purl={purl}",
+            f"--rl-store={__RLSTORE}",
+        ]
+        status = __run(cmd, stdout=subprocess.PIPE, encoding="utf-8")
 
-    if status.returncode == 0:
-        return ScanResult(True, "rl-secure analysis: completed")
+        if status.returncode == 0:
+            return ScanResult(True, "rl-secure analysis: passed")
 
-    if status.returncode > 0:
-        msg = re.search(r"^\s*\[\s*CI:TEXT\s*\]\s*(.*)\s*$", status.stdout, re.MULTILINE)
-        return ScanResult(False, msg.group(1) if msg is not None else "rl-secure analysis: failed")
+        if status.returncode > 0:
+            msg = re.search(r"^\s*\[\s*CI:TEXT\s*\]\s*(.*)\s*$", status.stdout, re.MULTILINE)
+            return ScanResult(False, msg.group(1) if msg is not None else "rl-secure analysis: failed")
+    else:
+        # repro scan
+        def make_base_purl(purl):
+            elements = urlsplit(purl)
+            query = parse_qs(elements.query)
+            del query["build"]
+            return urlunsplit(
+                SplitResult(elements.scheme, elements.netloc, elements.path, urlencode(query), elements.fragment)
+            )
+
+        base_purl = make_base_purl(purl)
+        cmd = [
+            __executable(),
+            "checks",
+            "--return-status",
+            "--no-color",
+            f"--purl={base_purl}",
+            f"--rl-store={__RLSTORE}",
+        ]
+        status = __run(cmd, stdout=subprocess.PIPE, encoding="utf-8")
+
+        if status.returncode == 3:
+            return ScanResult(False, "reproducible build check: failed")
+
+        if status.returncode >= 0:
+            return ScanResult(True, "reproducible build check: passed")
 
     status.check_returncode()  # raise exception
     assert False  # to get rid of mypy no return code
