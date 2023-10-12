@@ -8,6 +8,7 @@ import rlsecure
 from cimessages import Messages
 
 
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         formatter_class=argparse.RawDescriptionHelpFormatter,

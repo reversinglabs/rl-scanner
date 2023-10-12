@@ -5,7 +5,6 @@ import argparse
 import os
 import sys
 import glob
-from urllib.parse import urlsplit, parse_qs
 
 import rlsecure
 from cimessages import Messages
@@ -21,6 +20,7 @@ def __expand_specs(specs: str) -> str:
 
 
 def main() -> int:
+
     parser = argparse.ArgumentParser(
         formatter_class=argparse.RawDescriptionHelpFormatter,
         prog="rl-scan",
@@ -73,7 +73,7 @@ def main() -> int:
     parser.add_argument(
         "--report-format",
         default="all",
-        help="A comma-separated list of report formats to generate. Supported values: cyclonedx, sarif, spdx, rl-html, rl-json, rl-checks, all",
+        help="A comma-separated list of report formats to generate. Supported values: spdx, cyclonedx, sarif, rl-html, rl-json, all",
     )
     parser.add_argument(
         "--message-reporter",
@@ -97,12 +97,6 @@ def main() -> int:
             raise RuntimeError("--purl should be specified when generating a difference report")
         if params.rl_store is None:
             raise RuntimeError("--rl-store should be specified when generating a difference report")
-
-    if params.purl is not None:
-        query = parse_qs(urlsplit(params.purl).query)
-        if "build" in query and "repro" in query["build"]:
-            if params.rl_store is None:
-                raise RuntimeError("--rl-store must be specified when generating a reproducible build report")
 
     # if params.report_path object exists it should be an empty directory
     if os.path.exists(params.report_path) and not (

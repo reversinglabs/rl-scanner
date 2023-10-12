@@ -121,10 +121,7 @@ docker run --rm \
   -e RLSECURE_ENCODED_LICENSE=<base64 encoded license file> \
   -e RLSECURE_SITE_KEY=<site key> \
   reversinglabs/rl-scanner \
-  rl-scan \
-    --package-path=/packages/deployment_pkg.tgz \
-    --report-path=/report \
-    --report-format=rl-html
+  rl-scan --package-path=/packages/deployment_pkg.tgz --report-path=/report --report-format=rl-html
 ```
 
 
@@ -148,12 +145,7 @@ docker run --rm \
   -e RLSECURE_ENCODED_LICENSE=<base64 encoded license file> \
   -e RLSECURE_SITE_KEY=<site key> \
   reversinglabs/rl-scanner \
-  rl-scan \
-    --rl-store=/rlstore \
-    --purl=project/package@1.0.0 \
-    --package-path=/packages/project-1.0.0.tgz \
-    --report-path=/report \
-    --report-format=rl-html
+  rl-scan --rl-store=/rlstore --purl=project/package@1.0.0 --package-path=/packages/project-1.0.0.tgz --report-path=/report --report-format=rl-html
 ```
 
 
@@ -173,42 +165,7 @@ docker run --rm \
   -e RLSECURE_ENCODED_LICENSE=<base64 encoded license file> \
   -e RLSECURE_SITE_KEY=<site key> \
   reversinglabs/rl-scanner \
-  rl-scan \
-    --rl-store=/rlstore \
-    --purl=project/package@1.1.0 \
-    --package-path=/packages/project-1.1.0.tgz \
-    --diff-with=1.0.0 \
-    --report-path=/report \
-    --report-format=rl-html
-```
-
-### Perform build reproducibility check
-
-To perform a build reproducibility check, we need two build artifacts of a package version.
-
-Assuming there is already an existing package store with a previously scanned package version `project/package@1.1.0`, we perform a reproducibility check by scanning another build artifact of the same package version with the specially crafted project URL `project/package@1.1.0?build=repro`. 
-
-The previously scanned artifact for the package version is used as the reference against which the artifact we're scanning will be compared.
-The `build=repro` qualifier indicates our intention to perform a reproducibility build check.
-
-The following command will scan the new artifact and perform a build reproducibility check for the version `project/package@1.1.0`.
-
-
-```
-docker run --rm \
-  -u $(id -u):$(id -g) \
-  -v "$(pwd)/packages:/packages:ro" \
-  -v "$(pwd)/rlstore:/rlstore" \
-  -v "$(pwd)/report:/report" \
-  -e RLSECURE_ENCODED_LICENSE=<base64 encoded license file> \
-  -e RLSECURE_SITE_KEY=<site key> \
-  reversinglabs/rl-scanner \
-  rl-scan \
-    --rl-store=/rlstore \
-    --purl=project/package@1.1.0?build=repro \
-    --package-path=/packages/project-1.1.0-build-2.tgz \
-    --report-path=/report \
-    --report-format=rl-html
+  rl-scan --rl-store=/rlstore --purl=project/package@1.1.0 --package-path=/packages/project-1.1.0.tgz --diff-with=1.0.0 --report-path=/report --report-format=rl-html
 ```
 
 
@@ -220,7 +177,7 @@ The `rl-scan` helper tool supports the following parameters.
 | :--------- | :------ |
 | `--package-path` | Required. Path to the package file you want to scan. The specified package file must exist in the **package source** directory mounted to the container.  |
 | `--report-path` | Required. Path to the location where you want to store analysis reports. The specified path must exist in the **reports destination** directory mounted to the container. |
-| `--report-format` | Required. A comma-separated list of report formats to generate. Supported values: `cyclonedx`, `sarif`, `spdx`, `rl-html`, `rl-json`, `all` |
+| `--report-format` | Required. A comma-separated list of report formats to generate. Supported values: `cyclonedx`, `sarif`, `rl-html`, `rl-json`, `all` |
 | `--rl-store` | Optional. Path to existing RL Secure store that is to be used for scan. |
 | `--purl` | Optional. Package URL used for scan (format `[pkg:namespace/]<project></package><@version>`). |
 | `--diff-with` | Optional. Package version that will be used as a base for difference report. |
@@ -242,10 +199,7 @@ docker run --rm \
   -e RLSECURE_ENCODED_LICENSE=<base64 encoded license file> \
   -e RLSECURE_SITE_KEY=<site key> \
   reversinglabs/rl-scanner \
-  rl-prune \
-    --rl-store=/rlstore \
-    --purl=project/package \
-    --days-older=15
+  rl-prune --rl-store=/rlstore --purl=project/package --days-older=15
 ```
 
 
