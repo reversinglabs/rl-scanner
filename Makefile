@@ -11,7 +11,7 @@ endif
 VOLUMES 		:= -v ./output:/output -v ./input:/input
 USER_GROUP		:= $(shell id -u):$(shell id -u )
 
-COMMON_DOCKER	:= -i --rm -u $(USER_GROUP) --env-file=.envfile
+COMMON_DOCKER	:= -i --rm -u $(USER_GROUP) --env-file=../.envfile
 
 # IMAGE_NAME		:= rlsecure/scanner:latest
 IMAGE_BASE		:= reversinglabs/rl-scanner
@@ -20,7 +20,17 @@ IMAGE_NAME		:= $(IMAGE_BASE):$(BUILD_VERSION)
 ARTIFACT_OK		:=	vim
 ARTIFACT_ERR	:=	eicarcom2.zip
 
-all: clean build testFail test_ok test_err
+LINE_LENGTH = 120
+
+IMAGE ?= reversinglabs/rl-scanner
+TAG   ?= latest
+
+.PHONY: build clean
+
+all: clean prep format build testFail test_ok test_err clean
+
+prep:
+	wget 'https://www.eicar.org/download/eicar-com-2-2/?wpdmdl=8848&refresh=65d33af627b351708342006' --output-document 'eicarcom2.zip'
 
 # build a new docker image from the Dockerfile generated
 build:
@@ -57,16 +67,9 @@ test_err:
 clean:
 	docker image prune -f
 	-docker image rm $(IMAGE_NAME)
-	rm -rf input output tmp
 	rm -f eicarcom2.zip
 	rm -rf .mypy_cache */.mypy_cache
 
-push:
-	docker push $(IMAGE_NAME)
-	docker pushrm $(IMAGE_NAME)
+format:
+	black --line-length $(LINE_LENGTH) scripts/*
 
-tag:
-	echo "not yet functional"
-	exit 1
-	git tag -a v1.0.0 -m "version v1.0.0"
-	git push --tags
