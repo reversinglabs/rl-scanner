@@ -56,8 +56,10 @@ def __collect_install_args() -> List[str]:
     return [a for a in args if a is not None]
 
 
-def install() -> None:
+def install(stream: Optional[str] = None) -> None:
     args = ["rl-deploy", "install", __INSTALL_LOCATION, "--no-tracking"] + __collect_install_args()
+    if stream is not None:
+        args.append(f"--stream={stream}")
     __run(args, check=True)
 
 

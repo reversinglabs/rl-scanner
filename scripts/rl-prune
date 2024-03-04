@@ -24,6 +24,11 @@ def main() -> int:
     )
 
     parser.add_argument(
+        "--stream",
+        required=False,
+        help="Package stream name",
+    )
+    parser.add_argument(
         "--rl-store",
         required=True,
         help="Path to an existing rl-store",
@@ -67,7 +72,7 @@ def main() -> int:
     # install rl-secure
     if not rlsecure.check_if_installed():
         with reporter.progress_block("Installing rl-secure"):
-            rlsecure.install()
+            rlsecure.install(params.stream)
 
     # set rl-store
     rlsecure.use_store(params.rl_store)
