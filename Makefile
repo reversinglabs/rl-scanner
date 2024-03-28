@@ -11,7 +11,7 @@ endif
 VOLUMES 		:= -v ./output:/output -v ./input:/input
 USER_GROUP		:= $(shell id -u):$(shell id -u )
 
-COMMON_DOCKER	:= -i --rm -u $(USER_GROUP) --env-file=../.envfile
+COMMON_DOCKER	:= -i --rm -u $(USER_GROUP) --env-file=$(HOME)/.envfile_rl-scanner.docker
 
 # IMAGE_NAME		:= rlsecure/scanner:latest
 IMAGE_BASE		:= reversinglabs/rl-scanner

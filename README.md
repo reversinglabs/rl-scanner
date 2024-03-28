@@ -11,7 +11,7 @@ This image is based on Rocky Linux 9.
 
 ## What is rl-secure?
 
-`rl-secure` is a CLI tool that's part of the secure.software platform - a new ReversingLabs solution for software supply chain security.
+`rl-secure` is a CLI tool that's part of the Spectra Assure platform - a new ReversingLabs solution for software supply chain security.
 
 With `rl-secure`, you can:
 
@@ -26,7 +26,7 @@ With `rl-secure`, you can:
 
 **Maintained by:**
 
-- [ReversingLabs](https://www.reversinglabs.com/) as part of the [secure.software platform](https://www.secure.software/)
+- [ReversingLabs](https://www.reversinglabs.com/) as part of the [Spectra Assure platform](https://www.reversinglabs.com/products/software-supply-chain-security)
 
 **Where to get help:**
 
@@ -221,7 +221,7 @@ The `rl-scan` helper tool supports the following parameters.
 | `--package-path` | Required. Path to the package file you want to scan. The specified package file must exist in the **package source** directory mounted to the container.  |
 | `--report-path` | Required. Path to the location where you want to store analysis reports. The specified path must exist in the **reports destination** directory mounted to the container. |
 | `--report-format` | Required. A comma-separated list of report formats to generate. Supported values: `cyclonedx`, `sarif`, `spdx`, `rl-html`, `rl-json`, `all` |
-| `--rl-store` | Optional. Path to existing RL Secure store that is to be used for scan. |
+| `--rl-store` | Optional. Path to existing rl-secure package store that is to be used for scan. |
 | `--purl` | Optional. Package URL used for scan (format `[pkg:namespace/]<project></package><@version>`). |
 | `--diff-with` | Optional. Package version that will be used as a base for difference report. |
 | `--rl-level` | Optional. Scan level used for report generation. Can't be used with an existing rl-store. Read more on how to use the [RL-Levels feature](https://docs.secure.software/concepts/levels). |
