@@ -6,7 +6,7 @@ from typing import (
 )
 
 
-class Messages:
+class Messages:  # pylint: disable=too-few-public-methods
     @classmethod
     def create(cls, name: str) -> Any:
         if name == "teamcity":
@@ -48,8 +48,7 @@ class TeamCityMesages(Messages):
         if isinstance(msg, dict):
             msg_content: List[str] = [f"{k}='{escape(v)}'" for k, v in msg.items()]
             return f"##teamcity[{name} {' '.join(msg_content)}]"
-        else:
-            return f"##teamcity[{name} '{escape(msg)}']"
+        return f"##teamcity[{name} '{escape(msg)}']"
 
     def block_start(self, msg: str) -> None:
         print(TeamCityMesages.service_message("progressStart", msg), flush=True)

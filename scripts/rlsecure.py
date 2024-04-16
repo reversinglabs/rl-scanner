@@ -3,9 +3,16 @@ import re
 import glob
 import shutil
 import subprocess
-from distutils.dir_util import copy_tree
+
+# from distutils.dir_util import copy_tree
 from pathlib import Path
-from urllib.parse import urlsplit, parse_qs, urlunsplit, urlencode, SplitResult
+from urllib.parse import (
+    urlsplit,
+    parse_qs,
+    urlunsplit,
+    urlencode,
+    SplitResult,
+)
 from typing import (
     Optional,
     Any,
@@ -23,7 +30,7 @@ def __is_empty_dir(path: str) -> bool:
 
 def __run(*args: Any, **kwargs: Any) -> Any:
     try:
-        return subprocess.run(*args, **kwargs)
+        return subprocess.run(*args, **kwargs)  # pylint: disable=subprocess-run-check
     except subprocess.CalledProcessError as ex:
         raise RuntimeError(f'Command "{" ".join(*args)}" returned non-zero exit code ({ex.returncode})') from ex
     except Exception as ex:
@@ -64,7 +71,7 @@ def install(stream: Optional[str] = None) -> None:
 
 
 def use_store(store_path: str) -> None:
-    global __RLSTORE
+    global __RLSTORE  # pylint: disable=global-statement
     __RLSTORE = store_path
     if not os.path.isdir(__RLSTORE):
         raise RuntimeError(f"'{__RLSTORE}' is not a directory")
@@ -120,7 +127,7 @@ def prune(
     __run(cmd, check=True)
 
 
-class ScanResult:
+class ScanResult:  # pylint: disable=too-few-public-methods
     def __init__(self, passed: bool, msg: str) -> None:
         self.passed = passed
         self.msg = msg
@@ -161,7 +168,11 @@ def generate_report(
 
     # copy report to desired location
     os.makedirs(rpt_path, exist_ok=True)
-    copy_tree(__RLREPORT_LOCATION, rpt_path)
+    shutil.copytree(
+        src=__RLREPORT_LOCATION,
+        dst=rpt_path,
+        dirs_exist_ok=True,
+    )
 
     # collect scan results
     if not is_repro:
@@ -184,12 +195,18 @@ def generate_report(
             return ScanResult(False, msg.group(1) if msg is not None else "rl-secure analysis: failed")
     else:
         # repro scan
-        def make_base_purl(purl):
+        def make_base_purl(purl: str) -> str:
             elements = urlsplit(purl)
             query = parse_qs(elements.query)
             del query["build"]
             return urlunsplit(
-                SplitResult(elements.scheme, elements.netloc, elements.path, urlencode(query), elements.fragment)
+                SplitResult(
+                    elements.scheme,
+                    elements.netloc,
+                    elements.path,
+                    urlencode(query),
+                    elements.fragment,
+                )
             )
 
         base_purl = make_base_purl(purl)

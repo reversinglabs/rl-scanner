@@ -186,7 +186,7 @@ docker run --rm \
 
 To perform a build reproducibility check, we need two build artifacts of a package version.
 
-Assuming there is already an existing package store with a previously scanned package version `project/package@1.1.0`, we perform a reproducibility check by scanning another build artifact of the same package version with the specially crafted project URL `project/package@1.1.0?build=repro`. 
+Assuming there is already an existing package store with a previously scanned package version `project/package@1.1.0`, we perform a reproducibility check by scanning another build artifact of the same package version with the specially crafted project URL `project/package@1.1.0?build=repro`.
 
 The previously scanned artifact for the package version is used as the reference against which the artifact we're scanning will be compared.
 The `build=repro` qualifier indicates our intention to perform a reproducibility build check.
@@ -220,7 +220,7 @@ The `rl-scan` helper tool supports the following parameters.
 | :--------- | :------ |
 | `--package-path` | Required. Path to the package file you want to scan. The specified package file must exist in the **package source** directory mounted to the container.  |
 | `--report-path` | Required. Path to the location where you want to store analysis reports. The specified path must exist in the **reports destination** directory mounted to the container. |
-| `--report-format` | Required. A comma-separated list of report formats to generate. Supported values: `cyclonedx`, `sarif`, `spdx`, `rl-html`, `rl-json`, `all` |
+| `--report-format` | Required. A comma-separated list of report formats to generate. Supported values: `cyclonedx`, `sarif`, `spdx`, `rl-html`, `rl-json`, `rl-checks`, `rl-cve`, `all` |
 | `--rl-store` | Optional. Path to existing rl-secure package store that is to be used for scan. |
 | `--purl` | Optional. Package URL used for scan (format `[pkg:namespace/]<project></package><@version>`). |
 | `--diff-with` | Optional. Package version that will be used as a base for difference report. |

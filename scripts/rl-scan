@@ -5,10 +5,16 @@ import argparse
 import os
 import sys
 import glob
-from urllib.parse import urlsplit, parse_qs
+from urllib.parse import (
+    urlsplit,
+    parse_qs,
+)
 
 import rlsecure
 from cimessages import Messages
+from typing import (
+    List,
+)
 
 
 def __expand_specs(specs: str) -> str:
@@ -20,7 +26,20 @@ def __expand_specs(specs: str) -> str:
     return files[0]
 
 
+ReportFormatLIst: List[str] = [
+    "cyclonedx",
+    "sarif",
+    "spdx",
+    "rl-html",
+    "rl-json",
+    "rl-checks",
+    "rl-cve",
+    "all",
+]
+
+
 def main() -> int:
+    reportList = ", ".join(ReportFormatLIst)
     parser = argparse.ArgumentParser(
         formatter_class=argparse.RawDescriptionHelpFormatter,
         prog="rl-scan",
@@ -78,7 +97,7 @@ def main() -> int:
     parser.add_argument(
         "--report-format",
         default="all",
-        help="A comma-separated list of report formats to generate. Supported values: cyclonedx, sarif, spdx, rl-html, rl-json, rl-checks, all",
+        help=f"A comma-separated list of report formats to generate. Supported values: {reportList}",
     )
     parser.add_argument(
         "--message-reporter",
