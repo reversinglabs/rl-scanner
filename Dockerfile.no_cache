@@ -1,0 +1,15 @@
+# syntax=docker/dockerfile:1
+
+FROM rockylinux:9-minimal
+COPY scripts/* /opt/rl-scanner/
+RUN <<EORUN
+    set -e
+    microdnf upgrade -y
+    microdnf install -y --nodocs python3-pip
+    pip3 install --no-cache-dir rl-deploy
+    microdnf clean all
+
+    chmod 755 /opt/rl-scanner/entrypoint /opt/rl-scanner/rl-scan /opt/rl-scanner/rl-prune
+EORUN
+ENV PATH="/opt/rl-scanner:${PATH}"
+ENTRYPOINT [ "/opt/rl-scanner/entrypoint" ]

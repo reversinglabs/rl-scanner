@@ -1,7 +1,8 @@
-dist
-rl-deploy
 __pycache__
-input/
-output/
-tmp/
-eicarcom2.zip
+.mypy_cache/
+tests/*/report/
+tests/repro/store/
+tests/repro/report_base/
+tests/repro/report_repro_fail/
+tests/repro/report_repro_ok/
+OLD/

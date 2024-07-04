@@ -11,8 +11,8 @@ from cimessages import Messages
 def main() -> int:
     parser = argparse.ArgumentParser(
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        prog="rl-scan",
-        description="ReversingLabs: rl-prune CLI (Preview)\n\n"
+        prog="rl-prune",
+        description="ReversingLabs: rl-prune CLI\n\n"
         "Extended product documentation is available at: https://docs.secure.software",
         epilog="Environment variables:\n"
         "  RLSECURE_ENCODED_LICENSE - Base64 encoded license file contents\n"

@@ -5,6 +5,7 @@ import argparse
 import os
 import sys
 import glob
+import uuid
 from urllib.parse import (
     urlsplit,
     parse_qs,
@@ -43,11 +44,13 @@ def main() -> int:
     parser = argparse.ArgumentParser(
         formatter_class=argparse.RawDescriptionHelpFormatter,
         prog="rl-scan",
-        description="ReversingLabs: rl-scan CLI (Preview)\n\n"
+        description="ReversingLabs: rl-scan CLI\n\n"
         "Extended product documentation is available at: https://docs.secure.software",
         epilog="Environment variables:\n"
         "  RLSECURE_ENCODED_LICENSE - Base64 encoded license file contents\n"
         "  RLSECURE_SITE_KEY        - Site activation key for licensing\n"
+        "  RLSECURE_VAULT_KEY        - Password vault key\n"
+        "  RLSECURE_PACKAGE_PASSWORD - Password used to scan package\n"
         "  RLSECURE_PROXY_SERVER    - Server URL for local proxy\n"
         "  RLSECURE_PROXY_PORT      - Network port for local proxy\n"
         "  RLSECURE_PROXY_USER      - User name for proxy authentication\n"
@@ -65,6 +68,11 @@ def main() -> int:
         help="Path to an existing rl-store",
     )
     parser.add_argument(
+        "--vault-key",
+        required=False,
+        help="Password vault key",
+    )
+    parser.add_argument(
         "--purl",
         required=False,
         help="Package URL used for the scan (format [pkg:namespace/]<project></package><@version>)",
@@ -73,6 +81,28 @@ def main() -> int:
         "--package-path",
         required=True,
         help="Path to the package file you want to scan (supports wildcards)",
+    )
+    parser.add_argument(
+        "--password",
+        required=False,
+        action="append",
+        default=[],
+        help="Specify the password that will be used to unpack password protected files. Multiple passwords can be specified",
+    )
+    parser.add_argument(
+        "--password-list",
+        required=False,
+        action="append",
+        default=[],
+        help="Specify the path to a password list that will be used when trying to unpack password protected files. Multiple invocations are supported",
+    )
+    parser.add_argument(
+        "--encoded-password-list",
+        "--encoded-list",
+        required=False,
+        action="append",
+        default=[],
+        help="Base64 encoded password list file that will be used when trying to unpack password protected files. Multiple invocations are supported",
     )
     parser.add_argument(
         "--replace",
@@ -132,7 +162,23 @@ def main() -> int:
     if os.path.exists(params.report_path) and not (
         os.path.isdir(params.report_path) and not os.listdir(params.report_path)
     ):
-        raise RuntimeError("--report-path needs to point to an empty directory!")
+        raise RuntimeError("--report-path needs to point to an empty directory")
+
+    # collect password information
+    passwords = rlsecure.read_package_password_parameters(params)
+    vault_key = None
+
+    # if internal store is used, we can use fixed vault password since store is temporary
+    if params.rl_store is None:
+        vault_key = str(uuid.uuid4())
+    else:
+        if os.environ.get("RLSECURE_VAULT_KEY") is not None:
+            vault_key = os.environ.get("RLSECURE_VAULT_KEY")
+        if params.vault_key is not None:
+            vault_key = params.vault_key
+
+    if not passwords.empty() and vault_key is None:
+        raise RuntimeError("vault key should be specified if package password is used")
 
     reporter = Messages.create(params.message_reporter)
 
@@ -146,14 +192,14 @@ def main() -> int:
     else:
         # initialize temporary store
         with reporter.progress_block("Initializing rl-secure store"):
-            rlsecure.init_store(params.rl_level)
+            rlsecure.init_store(params.rl_level, vault_key)
 
     # process target package
     target_purl = params.purl if params.purl is not None else "project/package@target"
     path = __expand_specs(params.package_path)
     with reporter.progress_block("Scanning software package"):
         reporter.info(f"Package path: {path}")
-        rlsecure.scan(target_purl, path, params.replace, params.diff_with)
+        rlsecure.scan(target_purl, path, params.replace, passwords, params.diff_with)
 
     # generate report
     with reporter.progress_block("Generating report(s)"):

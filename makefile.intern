@@ -1,0 +1,24 @@
+# for local dev/test setup read the licence and key from a file if not already in the environment
+LIC_FILE	:=	~/.envfile_rl-scanner.docker
+
+ifeq ($(strip $(RLSECURE_ENCODED_LICENSE)),)
+    RLSECURE_ENCODED_LICENSE:= $(shell source $(LIC_FILE); echo $${RLSECURE_ENCODED_LICENSE} )
+    $(info loading licence from $(LIC_FILE))
+	export RLSECURE_ENCODED_LICENSE
+endif
+ifeq ($(strip $(RLSECURE_ENCODED_LICENSE)),)
+    $(error  mandatory RLSECURE_ENCODED_LICENSE not set!)
+endif
+
+ifeq ($(strip $(RLSECURE_SITE_KEY)),)
+    RLSECURE_SITE_KEY	:= $(shell source $(LIC_FILE); echo $${RLSECURE_SITE_KEY} )
+    $(info loading sete_key from $(LIC_FILE))
+	export RLSECURE_SITE_KEY
+endif
+ifeq ($(strip $(RLSECURE_SITE_KEY)),)
+    $(error  mandatory RLSECURE_SITE_KEY not set!)
+endif
+
+
+all:
+	make all

@@ -1,97 +1,74 @@
-# the envfile has the 2 required environment variables:
-# RLSECURE_SITE_KEY=
+# Makefile expects 2 required environment variables for
+#   build-with-cache and test targets:
 # RLSECURE_ENCODED_LICENSE=
+# RLSECURE_SITE_KEY=
 
-ifdef DOCKER_TAG
-    BUILD_VERSION	:= $(DOCKER_TAG)
-else
-    BUILD_VERSION=latest
+ifeq ($(strip $(RLSECURE_ENCODED_LICENSE)),)
+    $(error  mandatory RLSECURE_ENCODED_LICENSE not set!)
 endif
 
-VOLUMES 		:= -v ./output:/output -v ./input:/input
-USER_GROUP		:= $(shell id -u):$(shell id -u )
-COMMON_DOCKER	:= -i --rm -u $(USER_GROUP) --env-file=$(HOME)/.envfile_rl-scanner.docker
+ifeq ($(strip $(RLSECURE_SITE_KEY)),)
+    $(error  mandatory RLSECURE_SITE_KEY not set!)
+endif
 
-# IMAGE_NAME		:= rlsecure/scanner:latest
-IMAGE_BASE		:= reversinglabs/rl-scanner
-IMAGE_NAME		:= $(IMAGE_BASE):$(BUILD_VERSION)
-
-ARTIFACT_OK		:=	vim
-ARTIFACT_ERR	:=	eicarcom2.zip
-
+IMAGE_NAME ?= reversinglabs/rl-scanner:test
 LINE_LENGTH = 120
 PL_LINTERS = "eradicate,mccabe,pycodestyle,pyflakes,pylint"
 PL_IGNORE = C0114,C0115,C0116
 SCRIPTS = scripts/
 
-IMAGE ?= reversinglabs/rl-scanner
-TAG   ?= latest
 
-.PHONY: build clean
+.PHONY: build-without-cache build-with-cache push clean format pycheck test test.%
 
-all: clean prep build tests
+all: clean prep build test
+
+prep: format pylama mypy
+
+build: build-with-cache
+
+build-without-cache:
+	docker buildx build . -f Dockerfile.no_cache \
+	--no-cache \
+	-t $(IMAGE_NAME)
+
+#	--build-arg CACHE_PATH=/tmp/rl-secure.cache
+build-with-cache:
+	docker buildx build . -f Dockerfile.cache \
+	--no-cache \
+	--secret id=rlsecure_license,env=RLSECURE_ENCODED_LICENSE \
+	--secret id=rlsecure_sitekey,env=RLSECURE_SITE_KEY \
+	-t $(IMAGE_NAME)
 
 clean:
-	docker image prune -f
-	-docker image rm $(IMAGE_NAME)
-	rm -f eicarcom2.zip
-	rm -rf .mypy_cache */.mypy_cache
+	-docker rmi $(IMAGE_NAME)
+	rm -rf ./tests/*/report/
+	rm -rf ./tests/repro/store/
+	rm -rf ./tests/repro/report_base/
+	rm -rf ./tests/repro/report_repro_fail/
+	rm -rf ./tests/repro/report_repro_ok/
 
-prep: format pycheck mypy
-	wget 'https://www.eicar.org/download/eicar-com-2-2/?wpdmdl=8848&refresh=65d33af627b351708342006' --output-document 'eicarcom2.zip'
-
-format: $(SCRIPTS)
+format:
 	black \
 		--line-length $(LINE_LENGTH) \
 		$(SCRIPTS)/*
 
-pycheck: $(SCRIPTS)
+pylama:
 	pylama \
 		--max-line-length $(LINE_LENGTH) \
 		--linters $(PL_LINTERS) \
 		--ignore $(PL_IGNORE) \
 		$(SCRIPTS)
 
-mypy: $(SCRIPTS)
+mypy:
 	mypy \
 		--strict \
 		--no-incremental \
 		$(SCRIPTS)
 
 
-# build a new docker image from the Dockerfile generated
-build:
-	mkdir -p tmp
-	docker build -t $(IMAGE_NAME) -f Dockerfile .
-	docker image ls $(IMAGE_NAME) | tee ./tmp/image_ls.txt
-	docker image inspect $(IMAGE_NAME) --format '{{ .Config.Labels }}'
-	docker image inspect $(IMAGE_NAME) --format '{{ .RepoTags }}'
+all-tests :=  $(addprefix test., $(notdir $(wildcard tests/*)))
 
-tests: testFail test_ok test_err
+test.%: tests/%/run.sh
+	cd $(dir $<) && ./run.sh "$(IMAGE_NAME)"
 
-testFail:
-	# we know that specifying no arguments should print usage() and fail
-	-docker run $(COMMON_DOCKER) $(VOLUMES) $(IMAGE_NAME) # will fail but we will ignore that
-	# we know that specifying no arguments to rl-scan should print usage() and fail
-	-docker run $(COMMON_DOCKER) $(VOLUMES) $(IMAGE_NAME) rl-scan # will fail but we will ignore that
-
-test_ok:
-	rm -rf output input
-	mkdir -m 777 -p input output
-	cp /bin/$(ARTIFACT_OK) ./input/$(ARTIFACT_OK)
-	docker run $(COMMON_DOCKER) $(VOLUMES) $(IMAGE_NAME) \
-		rl-scan --package-path=/input/$(ARTIFACT_OK) --report-path=/output --report-format all
-	ls -laR input output >./tmp/list_in_out_ok.txt
-	cat output/report.rl.json | jq -r . >tmp/test_ok.json
-
-test_err:
-	rm -rf output input
-	mkdir -m 777 -p input output
-	curl -o $(ARTIFACT_ERR) -sS https://secure.eicar.org/$(ARTIFACT_ERR)
-	cp $(ARTIFACT_ERR) ./input/$(ARTIFACT_ERR)
-	# as we are now scanning a item that makes the scan fail (non zero exit code) we have to ignore the error in the makefile
-	-docker run $(COMMON_DOCKER) $(VOLUMES) $(IMAGE_NAME) \
-		rl-scan --package-path=/input/$(ARTIFACT_ERR) --report-path=/output --report-format all
-	ls -laR input output >./tmp/list_in_out_err.txt
-	cat output/report.rl.json | jq -r . >tmp/test_err.json
-
+test: $(all-tests)

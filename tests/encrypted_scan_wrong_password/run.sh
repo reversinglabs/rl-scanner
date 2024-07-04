@@ -1,0 +1,46 @@
+#!/bin/bash
+set -e
+
+DOCKER_IMAGE=$1
+
+rm -rf report
+mkdir -p report
+
+docker run \
+    --rm \
+    -u $(id -u):$(id -g) \
+    -v $(pwd):/package:ro \
+    -v $(pwd)/report:/report \
+    -e RLSECURE_ENCODED_LICENSE \
+    -e RLSECURE_SITE_KEY \
+    $DOCKER_IMAGE \
+        rl-scan \
+            --password=wrongsecret \
+            --package-path=/package/sample.zip \
+            --report-path=/report
+
+python - << 'END_PYTHON'
+import os.path
+exitVal = 0
+expectedFiles = [
+    'report/rl-html/sdlc.html',
+    'report/report.checks.json',
+    'report/report.cve.csv',
+    'report/report.cyclonedx.json',
+    'report/report.rl.json',
+    'report/report.sarif.json',
+    'report/report.spdx.json',
+]
+for f in expectedFiles:
+    if not os.path.isfile(f):
+        print("ERROR: Expected report not found: {}".format(f))
+        exit(1)
+
+with open('report/report.rl.json', 'rt') as f:
+    for line in f.readlines():
+        if 'SQ25105' in line:
+            exit(0)
+
+print("ERROR: SQ25105 not found")
+exit(0)
+END_PYTHON

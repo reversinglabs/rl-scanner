@@ -1,3 +1,4 @@
 #! /bin/bash
 
-make build
+make build-with-cache
+make test

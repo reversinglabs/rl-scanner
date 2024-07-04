@@ -1,0 +1,24 @@
+# syntax=docker/dockerfile:1
+
+ARG CACHE_PATH=/tmp/rl-secure.cache
+
+FROM rockylinux:9-minimal
+ARG CACHE_PATH
+COPY scripts/* /opt/rl-scanner/
+RUN --mount=type=secret,id=rlsecure_license --mount=type=secret,id=rlsecure_sitekey <<EORUN
+    set -e
+    echo ${CACHE_PATH}
+    microdnf upgrade -y
+    microdnf install -y --nodocs python3-pip
+    pip3 install --no-cache-dir rl-deploy
+    microdnf clean all
+    rl-deploy cache \
+        --no-tracking \
+        --location=${CACHE_PATH} \
+        --encoded-key=$(cat /run/secrets/rlsecure_license) \
+        --site-key=$(cat /run/secrets/rlsecure_sitekey)
+
+    chmod 755 /opt/rl-scanner/entrypoint /opt/rl-scanner/rl-scan /opt/rl-scanner/rl-prune
+EORUN
+ENV PATH="/opt/rl-scanner:${PATH}"
+ENTRYPOINT [ "/opt/rl-scanner/entrypoint" ]

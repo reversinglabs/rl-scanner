@@ -3,8 +3,6 @@ import re
 import glob
 import shutil
 import subprocess
-
-# from distutils.dir_util import copy_tree
 from pathlib import Path
 from urllib.parse import (
     urlsplit,
@@ -18,10 +16,57 @@ from typing import (
     Any,
     List,
 )
+from dataclasses import dataclass, field
 
+
+@dataclass
+class PkgPasswords:
+    passwords: List[str] = field(default_factory=list)
+    encoded_passwords: List[str] = field(default_factory=list)
+    password_lists: List[str] = field(default_factory=list)
+
+    def empty(self) -> bool:
+        return len(self.passwords) == 0 and len(self.encoded_passwords) == 0 and len(self.password_lists) == 0
+
+    def cmd_args(self) -> List[str]:
+        cmd = []
+        cmd += [f"--password={p}" for p in self.passwords]
+        cmd += [f"--password-list={p}" for p in self.password_lists]
+        cmd += [f"--encoded-list={p}" for p in self.encoded_passwords]
+        return cmd
+
+
+def read_package_password_parameters(args: Any) -> PkgPasswords:
+    pwds = PkgPasswords()
+
+    # collect environment variables
+    def collect_pass(passwords: List[str], env_var_name: str, arg_name: str) -> None:
+        env = os.environ.get(env_var_name)
+        if env is not None:
+            passwords.append(env)
+        arg = getattr(args, arg_name, [])
+        if arg is not None and len(arg) > 0:
+            passwords.extend(arg)
+
+    collect_pass(pwds.passwords, "RLSECURE_PACKAGE_PASSWORD", "password")
+    collect_pass(pwds.encoded_passwords, "RLSECURE_PACKAGE_ENCODED_LIST", "encoded_password_list")
+    collect_pass(pwds.password_lists, "RLSECURE_PACKAGE_PASSWORD_LIST", "password_list")
+
+    return pwds
+
+
+__CACHE_LOCATION = "/tmp/rl-secure.cache"
 __INSTALL_LOCATION = "/tmp/__rlsecure"
 __RLREPORT_LOCATION = "/tmp/__rlsecure-report"
 __RLSTORE = "/tmp/__rlstore"
+__VAULT_KEY = None
+
+
+def store_cmd_args() -> List[str]:
+    cmd = [f"--rl-store={__RLSTORE}"]
+    if __VAULT_KEY is not None:
+        cmd.append(f"--vault-key={__VAULT_KEY}")
+    return cmd
 
 
 def __is_empty_dir(path: str) -> bool:
@@ -29,12 +74,23 @@ def __is_empty_dir(path: str) -> bool:
 
 
 def __run(*args: Any, **kwargs: Any) -> Any:
+    def sanitize_arg(arg: str) -> str:
+        if arg.startswith("--vault-key="):
+            return "--vault-key=***"
+        if arg.startswith("--password="):
+            return "--password=***"
+        if arg.startswith("--encoded-list="):
+            return "--encoded-list=***"
+        return arg
+
     try:
         return subprocess.run(*args, **kwargs)  # pylint: disable=subprocess-run-check
     except subprocess.CalledProcessError as ex:
-        raise RuntimeError(f'Command "{" ".join(*args)}" returned non-zero exit code ({ex.returncode})') from ex
+        raise RuntimeError(
+            f'Command "{" ".join(map(sanitize_arg, *args))}" returned non-zero exit code ({ex.returncode})'
+        ) from ex
     except Exception as ex:
-        raise RuntimeError(f'{str(ex)} while executing "{" ".join(*args)}"') from ex
+        raise RuntimeError(f'{str(ex)} while executing "{" ".join(map(sanitize_arg, *args))}"') from ex
 
 
 def __executable() -> str:
@@ -63,41 +119,62 @@ def __collect_install_args() -> List[str]:
     return [a for a in args if a is not None]
 
 
+def __print_version() -> None:
+    args = [__executable(), "--version"]
+    __run(args, check=True)
+
+
 def install(stream: Optional[str] = None) -> None:
-    args = ["rl-deploy", "install", __INSTALL_LOCATION, "--no-tracking"] + __collect_install_args()
+    args = ["rl-deploy", "install", __INSTALL_LOCATION, "--no-tracking"]
+    if os.path.isfile(__CACHE_LOCATION):
+        args.append(f"--from-cache={__CACHE_LOCATION}")
+    args += __collect_install_args()
     if stream is not None:
         args.append(f"--stream={stream}")
     __run(args, check=True)
 
 
-def use_store(store_path: str) -> None:
+def use_store(store_path: str, vault_key: Optional[str] = None) -> None:
     global __RLSTORE  # pylint: disable=global-statement
     __RLSTORE = store_path
+    global __VAULT_KEY  # pylint: disable=global-statement
+    __VAULT_KEY = vault_key
     if not os.path.isdir(__RLSTORE):
         raise RuntimeError(f"'{__RLSTORE}' is not a directory")
     if not os.path.isdir(os.path.join(__RLSTORE, ".rl-secure")):
-        init_store()
+        init_store(None)
 
 
-def init_store(level: Optional[str] = None) -> None:
+def init_store(level: Optional[str] = None, vault_key: Optional[str] = None) -> None:
     os.makedirs(__RLSTORE, exist_ok=True)
     if not __is_empty_dir(__RLSTORE):
         raise RuntimeError(f"'{__RLSTORE}' is not an empty directory")
-    cmd = [__executable(), "init", __RLSTORE]
+    cmd = [__executable(), "init"] + store_cmd_args()
     if level is not None:
         cmd.append(f"--rl-level={level}")
     __run(cmd, check=True)
+    if vault_key is not None:
+        vault_init(vault_key)
+
+
+def vault_init(vault_key: str) -> None:
+    cmd = [__executable(), "vault", "init", f"--vault-key={vault_key}"] + store_cmd_args()
+    __run(cmd, check=True)
+    global __VAULT_KEY  # pylint: disable=global-statement
+    __VAULT_KEY = vault_key
 
 
 def __run_scan(args: List[str], **kwargs: Any) -> None:
-    cmd = [__executable(), "scan", "--no-tracking", f"--rl-store={__RLSTORE}"]
+    cmd = [__executable(), "scan", "--no-tracking"] + store_cmd_args()
     __run(cmd + args, **kwargs)
+    __print_version()
 
 
 def scan(
     purl: str,
     path: str,
     replace: bool,
+    passwords: PkgPasswords,
     base_version: Optional[str] = None,
 ) -> None:
     args = [f"--purl={purl}", f"--file-path={path}"]
@@ -105,6 +182,7 @@ def scan(
         args.append("--replace")
     if base_version is not None:
         args.append(f"--sync-with={base_version}")
+    args += passwords.cmd_args()
     __run_scan(args, check=True)
 
 
