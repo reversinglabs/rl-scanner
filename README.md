@@ -306,9 +306,9 @@ docker run --rm \
 
 ### Scanning password-protected files using an existing rl-store
 
-If an existing `rl-secure` package store (rl-store) is used for the scan process, password management needs to be permanent to support re-scanning package versions. 
-Because of this, all provided passwords are saved inside the rl-store in a secure vault protected by a master vault key. 
-This means that the vault key needs to be provided whenever you want to scan password-protected files. 
+If an existing `rl-secure` package store (rl-store) is used for the scan process, password management needs to be permanent to support re-scanning package versions.
+Because of this, all provided passwords are saved inside the rl-store in a secure vault protected by a master vault key.
+This means that the vault key needs to be provided whenever you want to scan password-protected files.
 You can provide the key with the `--vault-key` argument or the `RLSECURE_VAULT_KEY` environment variable.
 
 The following command will use an existing rl-store with a dedicated vault to scan a password-protected file.
@@ -388,3 +388,5 @@ The `rl-prune` tool supports the following parameters.
 | `--days-older` | Optional. Remove all versions with the last scan date older than the specified number of days. |
 | `--hours-older` | Optional. Remove all versions with the last scan date older than the specified number of hours. |
 | `--message-reporter` | Optional. Use it to change the format of output messages (STDOUT) for easier integration with CI tools. Supported values: `text`, `teamcity` |
+
+<!-- 2024-07-18: Spectra Assure CLI 2.3.0 has been released; rl-scanner v.3.1.0 -->
