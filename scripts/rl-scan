@@ -35,6 +35,7 @@ ReportFormatLIst: List[str] = [
     "rl-json",
     "rl-checks",
     "rl-cve",
+    "rl-uri", # new 2024-09-26
     "all",
 ]
 
