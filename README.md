@@ -396,3 +396,4 @@ The `rl-prune` tool supports the following parameters.
 <!-- 2024-09-12: Spectra Assure CLI 2.3.4 has been released; rl-scanner v3.1.4 -->
 <!-- 2024-09-26: Spectra Assure CLI 2.4.0 has been released; rl-scanner v3.2.0 -->
 <!-- 2024-09-26: Spectra Assure CLI 2.4.1 has been released; rl-scanner v3.2.1 -->
+<!-- 2024-10-24: Spectra Assure CLI 2.4.2 has been released; rl-scanner v3.2.2 -->
