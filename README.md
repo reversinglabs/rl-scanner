@@ -186,7 +186,7 @@ docker run --rm \
     --report-format=rl-html
 ```
 
-### Perform build reproducibility check
+### Perform build reproducibility checks
 
 To perform a build reproducibility check, we need two build artifacts of a package version.
 
@@ -334,7 +334,7 @@ docker run --rm \
 ```
 
 
-### Configuration parameters
+## Configuration parameters for rl-scan
 
 The `rl-scan` helper tool supports the following parameters.
 
@@ -342,16 +342,25 @@ The `rl-scan` helper tool supports the following parameters.
 | :--------- | :------ |
 | `--package-path` | Required. Path to the software package (the file you want to scan). The specified file must exist in the **package source** directory mounted to the container.  |
 | `--report-path` | Required. Path to the location where you want to store analysis reports. The specified path must exist in the **reports destination** directory mounted to the container. |
-| `--report-format` | Required. A comma-separated list of report formats to generate. Supported values: `cyclonedx`, `rl-checks`, `rl-cve`, `rl-html`, `rl-json`, `sarif`, `spdx`, `all`. |
-| `--rl-store` | Optional. Path to an existing rl-secure package store that will be used for the scan. Use this parameter when you already have a package store and want to scan the existing package versions inside it or add new package versions to it. The package store directory must be mounted to the container as a part of the Docker command. |
-| `--purl` | Optional. Package URL used for the scan (must be in the format `[pkg:namespace/]<project></package><@version>`). Package URLs are unique identifiers used to associate the scanned package version with a project and a package in the rl-store. |
-| `--diff-with` | Optional. Version number of a previously scanned package against which you want to compare (diff) the package version you're scanning. The version selected for diffing must exist in the same project and package as the version you're scanning. The package store must be specified with the --rl-store parameter. |
+| `--report-format` | Required. A comma-separated list of report formats to generate. Supported values: `cyclonedx`, `rl-checks`, `rl-cve`, `rl-html`, `rl-json`, `rl-uri`, `sarif`, `spdx`, `all`. |
 | `--rl-level` | Optional. Scan level used for report generation. Can't be used with an existing rl-store. Read more on how to use the [RL-Levels feature](https://docs.secure.software/concepts/levels). |
-| `--vault-key` | Optional. The "master" vault key used to protect saved passwords for an existing rl-store. When using a package store and scanning password-protected package versions, this key must be provided together with the password(s) in the scan command to allow saving the password(s) to the vault. |
 | `--password` | Optional. Literal password string to use for decrypting password-protected files when scanning a package version. Multiple invocations are possible. |
 | `--password-list` | Optional. Path to a password list file to use for decrypting password-protected files when scanning a package version. Multiple invocations are possible. |
 | `--encoded-password-list` | Optional. Base64-encoded contents of a password list file to use for decrypting password-protected files when scanning a package version. Multiple invocations are possible. |
 | `--message-reporter` | Optional. Use it to change the format of output messages (STDOUT) for easier integration with CI tools. Supported values: `text`, `teamcity` |
+
+
+### Package store configuration parameters
+
+The following `rl-scan` parameters are applicable only when working with a package store.
+
+| Parameter | Description |
+| :--------- | :------ |
+| `--rl-store` | Required when using a package store. Path to an existing rl-secure package store that will be used for the scan. Use this parameter when you already have a package store and want to scan the existing package versions inside it or add new package versions to it. The package store directory must be mounted to the container as a part of the Docker command. |
+| `--purl` | Required when using a package store. Package URL used for the scan (must be in the format `[pkg:namespace/]<project></package><@version>`). Package URLs are unique identifiers used to associate the scanned package version with a project and a package in the rl-store. This parameter must be used together with `--rl-store`. <br /><br />To use the reproducibility checks feature and analyze a reproducible build artifact of a package version, append `?build=repro` to the package URL of the artifact when scanning it: `--purl=project/package@1.0.0?build=repro`. |
+| `--diff-with` | Optional. Use this parameter to compare (diff) the package version you're scanning against a previous version. The parameter accepts a package version number as the value. The version selected for diffing must exist in the same project and package as the version you're scanning. The package store must be specified with the `--rl-store` parameter. <br /><br /> This parameter is ignored when analyzing reproducible build artifacts. |
+| `--replace` | Optional. Replace (overwrite) a package version (specified with `--purl`) that already exists in the package store with the file you're scanning. The package store must be specified with the `--rl-store` parameter. |
+| `--vault-key` | Optional. The "master" vault key used to protect saved passwords for an existing rl-store. When using a package store and scanning password-protected package versions, this key must be provided together with the password(s) in the scan command to allow saving the password(s) to the vault. |
 
 
 ## Cleaning up old scans
@@ -375,7 +384,7 @@ docker run --rm \
 ```
 
 
-### Configuration parameters
+### Configuration parameters for rl-prune
 
 The `rl-prune` tool supports the following parameters.
 
@@ -397,3 +406,4 @@ The `rl-prune` tool supports the following parameters.
 <!-- 2024-09-26: Spectra Assure CLI 2.4.0 has been released; rl-scanner v3.2.0 -->
 <!-- 2024-09-26: Spectra Assure CLI 2.4.1 has been released; rl-scanner v3.2.1 -->
 <!-- 2024-10-24: Spectra Assure CLI 2.4.2 has been released; rl-scanner v3.2.2 -->
+<!-- 2024-11-07: Spectra Assure CLI 2.4.3 has been released; rl-scanner v3.2.3 -->

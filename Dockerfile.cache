@@ -11,6 +11,8 @@ RUN --mount=type=secret,id=rlsecure_license --mount=type=secret,id=rlsecure_site
     microdnf upgrade -y
     microdnf install -y --nodocs python3-pip
     pip3 install --no-cache-dir rl-deploy
+    pip3 uninstall setuptools -y
+    microdnf remove pip -y
     microdnf clean all
     rl-deploy cache \
         --no-tracking \

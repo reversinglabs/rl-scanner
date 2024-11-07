@@ -7,6 +7,8 @@ RUN <<EORUN
     microdnf upgrade -y
     microdnf install -y --nodocs python3-pip
     pip3 install --no-cache-dir rl-deploy
+    pip3 uninstall setuptools -y
+    microdnf remove pip -y
     microdnf clean all
 
     chmod 755 /opt/rl-scanner/entrypoint /opt/rl-scanner/rl-scan /opt/rl-scanner/rl-prune
