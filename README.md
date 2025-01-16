@@ -348,6 +348,7 @@ The `rl-scan` helper tool supports the following parameters.
 | `--password-list` | Optional. Path to a password list file to use for decrypting password-protected files when scanning a package version. Multiple invocations are possible. |
 | `--encoded-password-list` | Optional. Base64-encoded contents of a password list file to use for decrypting password-protected files when scanning a package version. Multiple invocations are possible. |
 | `--message-reporter` | Optional. Use it to change the format of output messages (STDOUT) for easier integration with CI tools. Supported values: `text`, `teamcity` |
+| `--pack-safe` | Optional. Create an [RL-SAFE archive](https://docs.secure.software/concepts/analysis-reports#rl-safe-archive) in `--report-path`. RL-SAFE archives can be freely shared and moved between different computers, and viewed without requiring a Spectra Assure product license. To open the archive and work with it, you need [the SAFE Viewer](https://docs.secure.software/safe-viewer) - a free, cross-platform tool developed by ReversingLabs. By default, the RL-SAFE archive is named `report.rl-safe` and contains the same report formats as specified in `--report-format` (except `rl-json`). The `rl-html` (SAFE) and `rl-checks` are always implicitly included, but cannot be exported from the archive. |
 
 
 ### Package store configuration parameters
@@ -410,3 +411,4 @@ The `rl-prune` tool supports the following parameters.
 <!-- 2024-11-21: Spectra Assure CLI 2.4.4 has been released; rl-scanner v3.2.4 -->
 <!-- 2024-12-05: Spectra Assure CLI 2.5.0 has been released; rl-scanner v3.3.0 -->
 <!-- 2024-12-05: Spectra Assure CLI 2.5.1 has been released; rl-scanner v3.3.1 -->
+<!-- 2025-01-16; Spectra Assure CLI 2.5.2 has been released; rl-scanner v3.3.2 -->

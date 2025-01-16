@@ -22,7 +22,10 @@ $(error  mandatory RLSECURE_SITE_KEY not set!)
 endif
 
 
-build-test: build test clean
+build-test: clean prep build test # clean
+
+prep:
+	make prep
 
 build:
 	make build
