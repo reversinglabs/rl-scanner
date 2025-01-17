@@ -3,8 +3,8 @@ set -e
 
 DOCKER_IMAGE=$1
 
-rm -rf report
-mkdir -p report
+rm -rf report tmp
+mkdir -p report tmp
 
 docker run \
     --rm \
@@ -16,7 +16,8 @@ docker run \
     $DOCKER_IMAGE \
         rl-scan \
             --package-path=/package/sample.tgz \
-            --report-path=/report
+            --report-path=/report \
+            --pack-safe 2>&1 | tee ./tmp/out
 
 python - << 'END_PYTHON'
 import os.path
@@ -29,6 +30,7 @@ expectedFiles = [
     'report/report.rl.json',
     'report/report.sarif.json',
     'report/report.spdx.json',
+    'report/report.rl-safe',
 ]
 for f in expectedFiles:
     if not os.path.isfile(f):

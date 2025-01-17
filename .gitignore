@@ -1,6 +1,7 @@
 __pycache__
 .mypy_cache/
 tests/*/report/
+tests/*/tmp/
 tests/repro/store/
 tests/repro/report_base/
 tests/repro/report_repro_fail/

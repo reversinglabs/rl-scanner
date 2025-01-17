@@ -399,16 +399,7 @@ The `rl-prune` tool supports the following parameters.
 | `--hours-older` | Optional. Remove all versions with the last scan date older than the specified number of hours. |
 | `--message-reporter` | Optional. Use it to change the format of output messages (STDOUT) for easier integration with CI tools. Supported values: `text`, `teamcity` |
 
-<!-- 2024-07-18: Spectra Assure CLI 2.3.0 has been released; rl-scanner v3.1.0 -->
-<!-- 2024-08-01: Spectra Assure CLI 2.3.1 has been released; rl-scanner v3.1.1 -->
-<!-- 2024-08-14: Spectra Assure CLI 2.3.2 has been released; rl-scanner v3.1.2 -->
-<!-- 2024-08-29: Spectra Assure CLI 2.3.3 has been released; rl-scanner v3.1.3 -->
-<!-- 2024-09-12: Spectra Assure CLI 2.3.4 has been released; rl-scanner v3.1.4 -->
-<!-- 2024-09-26: Spectra Assure CLI 2.4.0 has been released; rl-scanner v3.2.0 -->
-<!-- 2024-09-26: Spectra Assure CLI 2.4.1 has been released; rl-scanner v3.2.1 -->
-<!-- 2024-10-24: Spectra Assure CLI 2.4.2 has been released; rl-scanner v3.2.2 -->
-<!-- 2024-11-07: Spectra Assure CLI 2.4.3 has been released; rl-scanner v3.2.3 -->
-<!-- 2024-11-21: Spectra Assure CLI 2.4.4 has been released; rl-scanner v3.2.4 -->
 <!-- 2024-12-05: Spectra Assure CLI 2.5.0 has been released; rl-scanner v3.3.0 -->
 <!-- 2024-12-05: Spectra Assure CLI 2.5.1 has been released; rl-scanner v3.3.1 -->
 <!-- 2025-01-16; Spectra Assure CLI 2.5.2 has been released; rl-scanner v3.3.2 -->
+<!-- 2025-01-17: Spectra Assure CLI 2.5.1 has been released; rl-scanner v3.3.3; fix pack-safe -->

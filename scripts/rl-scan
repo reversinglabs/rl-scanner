@@ -140,7 +140,7 @@ def my_params() -> argparse.Namespace:
     )
     parser.add_argument(
         "--pack-safe",
-        required=False,
+        action="store_true",
         help="create a rl-safe archive in the report directory",
     )
 
