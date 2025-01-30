@@ -111,6 +111,7 @@ To successfully use this Docker image, you need:
 3. Start the container with input and output directories mounted as volumes and `rl-secure` license keys provided as environment variables.
 
 To prevent issues with file ownership and access to analysis reports, the `-u` option is used to provide current user identification to the container.
+The line `-u $(id -u):$(id -g)` can be removed for platforms where docker runs as the current user like on Windows.
 
 The following command runs the `rl-scan` helper tool inside the container and scans a file from the mounted input directory.
 The file must exist in the mounted input directory.
@@ -402,4 +403,5 @@ The `rl-prune` tool supports the following parameters.
 <!-- 2024-12-05: Spectra Assure CLI 2.5.0 has been released; rl-scanner v3.3.0 -->
 <!-- 2024-12-05: Spectra Assure CLI 2.5.1 has been released; rl-scanner v3.3.1 -->
 <!-- 2025-01-16; Spectra Assure CLI 2.5.2 has been released; rl-scanner v3.3.2 -->
-<!-- 2025-01-17: Spectra Assure CLI 2.5.1 has been released; rl-scanner v3.3.3; fix pack-safe -->
+<!-- 2025-01-17: Spectra Assure CLI 2.5.2 has been released; rl-scanner v3.3.3; fix pack-safe -->
+<!-- 2025-01-30; Spectra Assure CLI 2.5.3 has been released; rl-scanner v3.3.4; -->
