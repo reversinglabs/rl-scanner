@@ -400,9 +400,7 @@ The `rl-prune` tool supports the following parameters.
 | `--hours-older` | Optional. Remove all versions with the last scan date older than the specified number of hours. |
 | `--message-reporter` | Optional. Use it to change the format of output messages (STDOUT) for easier integration with CI tools. Supported values: `text`, `teamcity` |
 
-<!-- 2025-01-30; Spectra Assure CLI 2.5.3 has been released; rl-scanner v3.3.4; -->
-<!-- 2025-02-13; Spectra Assure CLI 2.5.4 has been released; rl-scanner v3.3.5 -->
-<!-- 2025-02-27; Spectra Assure CLI 2.5.5 has been released; rl-scanner v3.3.6 -->
 <!-- 2025-03-13; Spectra Assure CLI 2.6.0 has been released; rl-scanner v3.4.0 -->
 <!-- 2025-03-27; Spectra Assure CLI 2.6.1 has been released; rl-scanner v3.4.1 -->
 <!-- 2025-04-10; Spectra Assure CLI 2.6.2 has been released; rl-scanner v3.4.2 -->
+<!-- 2025-04-24; Spectra Assure CLI 2.6.3 has been released; rl-scanner v3.4.3 -->
