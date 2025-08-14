@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
 
+from typing import (
+    List,
+    Tuple,
+    Optional,
+)
 
 import argparse
 import os
@@ -14,31 +19,27 @@ from rlsecure import (
     PkgPasswords,
     install,
     collect_password_info,
-    do_init_scanfile_report_status,
+    do_init_scanurl_report_status,
 )
 from cimessages import Messages
-from typing import (
-    List,
-    Tuple,
-    Optional,
-)
 from constants import REPORT_FORMATS
 from validators import (
     validate_store_level_purl,
     validate_store_diff_purl,
     validate_purl_repro_store,
     validate_report_path_exists_and_empty,
-    validate_path_is_single_file,
+    validate_import_url,
 )
 from myargs import (
     params_basic,
+    params_import_url,
     my_common_epilog,
     my_common_prog_description,
 )
 
 
 def _my_params() -> argparse.Namespace:
-    prog: str = "rl-scan"
+    prog: str = "rl-scan-url"
 
     parser = argparse.ArgumentParser(
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -51,10 +52,8 @@ def _my_params() -> argparse.Namespace:
         parser=parser,
     )
 
-    parser.add_argument(
-        "--package-path",
-        required=True,
-        help="Path to the package file you want to scan (supports wildcards)",
+    params_import_url(
+        parser=parser,
     )
 
     params = parser.parse_args()
@@ -63,7 +62,7 @@ def _my_params() -> argparse.Namespace:
     validate_store_diff_purl(params=params)
     validate_purl_repro_store(params=params)
     validate_report_path_exists_and_empty(params=params)
-    params.package_path = validate_path_is_single_file(params.package_path)
+    validate_import_url(params=params)
 
     if params.purl is None:
         params.purl = "project/package@target"
@@ -76,7 +75,7 @@ def main() -> int:
     reporter = Messages.create(params.message_reporter)
     passwords, vault_key = collect_password_info(params)
 
-    return do_init_scanfile_report_status(
+    return do_init_scanurl_report_status(
         params=params,
         reporter=reporter,
         passwords=passwords,

@@ -6,7 +6,10 @@ from typing import (
     List,
 )
 
-SCANNER_COMMANDS: List[str] = ["rl-scan", "rl-prune"]
+from constants import (
+    SCANNER_COMMANDS,
+    EXIT_FATAL,
+)
 
 
 def usage() -> None:
@@ -14,19 +17,24 @@ def usage() -> None:
     print("\nValid commands are:")
     for cmd in SCANNER_COMMANDS:
         print(f"\t{cmd}")
-    sys.exit(1)
+    sys.exit(EXIT_FATAL)
 
 
-if len(sys.argv) < 2:
-    usage()
+if __name__ == "__main__":
+    if len(sys.argv) < 2:
+        usage()
 
-if sys.argv[1] not in SCANNER_COMMANDS:
-    usage()
+    if sys.argv[1] not in SCANNER_COMMANDS:
+        usage()
 
-sys.exit(
-    subprocess.run(
-        sys.argv[1:],
-        shell=False,
-        check=False,
-    ).returncode,
-)
+    try:
+        rr = subprocess.run(
+            sys.argv[1:],
+            shell=False,
+            check=False,
+        ).returncode
+        sys.exit(rr)
+
+    except Exception as e:
+        print(f"Error: {sys.argv[1:]}; {str(e)}")
+        sys.exit(EXIT_FATAL)

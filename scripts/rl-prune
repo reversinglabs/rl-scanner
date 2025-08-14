@@ -4,25 +4,30 @@
 import argparse
 import sys
 
-import rlsecure
+from rlsecure import (
+    prune,
+    use_store,
+    install,
+    check_if_installed,
+)
 from cimessages import Messages
+from myargs import (
+    my_simple_epilog,
+    my_common_prog_description,
+)
 
 
 def main() -> int:
+    prog = "rl-prune"
+
     parser = argparse.ArgumentParser(
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        prog="rl-prune",
-        description="ReversingLabs: rl-prune CLI\n\n"
-        "Extended product documentation is available at: https://docs.secure.software",
-        epilog="Environment variables:\n"
-        "  RLSECURE_ENCODED_LICENSE - Base64 encoded license file contents\n"
-        "  RLSECURE_SITE_KEY        - Site activation key for licensing\n"
-        "  RLSECURE_PROXY_SERVER    - Server URL for local proxy\n"
-        "  RLSECURE_PROXY_PORT      - Network port for local proxy\n"
-        "  RLSECURE_PROXY_USER      - User name for proxy authentication\n"
-        "  RLSECURE_PROXY_PASSWORD  - Password for proxy authentication\n",
+        prog=prog,
+        description=my_common_prog_description(prog=prog),
+        epilog=my_simple_epilog(),
     )
 
+    # ============================
     parser.add_argument(
         "--stream",
         required=False,
@@ -38,6 +43,15 @@ def main() -> int:
         required=True,
         help="Package URL to prune (format [pkg:namespace/]<project>[</package>[<@version>]])",
     )
+
+    parser.add_argument(
+        "--message-reporter",
+        choices=["teamcity", "text"],
+        default="text",
+        help="Processing status message format",
+    )
+
+    # ============================
     parser.add_argument(
         "--before-date",
         required=False,
@@ -58,28 +72,33 @@ def main() -> int:
         required=False,
         help="Remove everything matching the package URL and older than the specified number of hours",
     )
-    parser.add_argument(
-        "--message-reporter",
-        choices=["teamcity", "text"],
-        default="text",
-        help="Processing status message format",
-    )
 
     params = parser.parse_args()
-
-    reporter = Messages.create(params.message_reporter)
+    reporter = Messages.create(
+        params.message_reporter,
+    )
 
     # install rl-secure
-    if not rlsecure.check_if_installed():
+    if not check_if_installed("rl-secure"):
         with reporter.progress_block("Installing rl-secure"):
-            rlsecure.install(params.stream)
+            install(
+                stream=params.stream,
+            )
 
     # set rl-store
-    rlsecure.use_store(params.rl_store)
+    use_store(
+        store_path=params.rl_store,
+    )
 
     # prune
     with reporter.progress_block("Pruning repository"):
-        rlsecure.prune(params.purl, params.before_date, params.after_date, params.days_older, params.hours_older)
+        prune(
+            purl=params.purl,
+            before_date=params.before_date,
+            after_date=params.after_date,
+            days_older=params.days_older,
+            hours_older=params.hours_older,
+        )
 
     return 0
 

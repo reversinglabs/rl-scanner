@@ -16,6 +16,9 @@ LINE_LENGTH = 120
 PL_LINTERS = "eradicate,mccabe,pycodestyle,pyflakes,pylint"
 PL_IGNORE = C0114,C0115,C0116
 SCRIPTS = scripts/
+RL_SCAN = scripts/rl-scan
+RL_PRUNE = scripts/rl-prune
+RL_INTRYPOINT = scripts/entrypoint
 
 
 .PHONY: build-without-cache build-with-cache push clean format pycheck test test.%
@@ -57,13 +60,33 @@ pylama:
 		--max-line-length $(LINE_LENGTH) \
 		--linters $(PL_LINTERS) \
 		--ignore $(PL_IGNORE) \
-		$(SCRIPTS)
+		$(SCRIPTS)/*
 
-mypy:
+mypy: mypy_a mypy_prune mypy_scan mypy_entry
+
+mypy_a:
 	mypy \
 		--strict \
 		--no-incremental \
 		$(SCRIPTS)
+
+mypy_prune:
+	mypy \
+		--strict \
+		--no-incremental \
+		$(SCRIPTS) $(RL_PRUNE)
+
+mypy_scan:
+	mypy \
+		--strict \
+		--no-incremental \
+		$(SCRIPTS) $(RL_SCAN)
+
+mypy_entry:
+	mypy \
+		--strict \
+		--no-incremental \
+		$(SCRIPTS) $(RL_ENTRYPOINT)
 
 
 all-tests :=  $(addprefix test., $(notdir $(wildcard tests/*)))
