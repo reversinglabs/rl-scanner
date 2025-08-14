@@ -479,6 +479,7 @@ Additional parameters for `rl-scan-purl`
 | `--bearer-token` | Optional. If the URL uses `token authentication` specicy the `token` with this parameter. Cannot be used in combination with either `--auth--user` or `--auth-pass`. |
 
 
+
 <!-- 2025-07-03; Spectra Assure CLI 2.8.2 has been released; rl-scanner v3.6.2 -->
 <!-- 2025-07-17; Spectra Assure CLI 2.9.0 has been released; rl-scanner v3.7.0 -->
 <!-- 2025-07-31; Spectra Assure CLI 3.0.0 has been released; rl-scanner v3.8.0 -->
