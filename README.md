@@ -57,7 +57,10 @@ The image provides helper tools that wrap the `rl-secure` functionality into a p
 As a result, users don't have to chain multiple `rl-secure` commands in the container, as the whole workflow can be executed with a single command.
 The following helper tools are included:
 
-- `rl-scan` - [for scanning packages](#scanning-packages)
+- `rl-scan` - [for scanning local packages](#scanning-local-packages)
+- `rl-scan-url` - [for importing packages from URLs](#rl-scan-url)
+- `rl-scan-purl` - [for importing packages from purls](#rl-scan-purl)
+- `rl-scan-docker` - [for scanning Docker images](#scanning-docker-images)
 - `rl-prune` - [for cleaning up old scans](#cleaning-up-old-scans)
 
 To use the provided `rl-secure` functionality, a valid site-wide deployment license is required.
@@ -100,7 +103,7 @@ To successfully use this Docker image, you need:
 3. **One or more software packages to analyze**. Your packages must be stored in a location that Docker will be able to access.
 
 
-## Scanning packages
+## Scanning local packages
 
 ### Scan a file and generate analysis report
 
@@ -118,7 +121,7 @@ The file must exist in the mounted input directory.
 The tool will generate a report in the specified format (in this example, it's an HTML report) and save it to the mounted output directory.
 
 
-```
+```shell
 docker run --rm \
   -u $(id -u):$(id -g) \
   -v "$(pwd)/packages:/packages:ro" \
@@ -144,7 +147,7 @@ To use an external store for the scan, you must provide two additional parameter
 
 The following command will use the `rlstore` directory located in the current working directory as the default rl-store, and will scan the package using the project URL `project/package@1.0.0`. After the scan, the scanned package information for version `1.0.0` will remain inside the store and can be used in the future.
 
-```
+```shell
 docker run --rm \
   -u $(id -u):$(id -g) \
   -v "$(pwd)/packages:/packages:ro" \
@@ -169,7 +172,7 @@ To scan the new version of the package (`1.1.0`) and generate a report that cont
 The following command will scan the new package version and generate a report with difference information against the previous package version.
 
 
-```
+```shell
 docker run --rm \
   -u $(id -u):$(id -g) \
   -v "$(pwd)/packages:/packages:ro" \
@@ -199,7 +202,7 @@ The `build=repro` qualifier indicates our intention to perform a reproducibility
 The following command will scan the new artifact and perform a build reproducibility check for the version `project/package@1.1.0`.
 
 
-```
+```shell
 docker run --rm \
   -u $(id -u):$(id -g) \
   -v "$(pwd)/packages:/packages:ro" \
@@ -240,7 +243,7 @@ If multiple passwords are required, you can use the `--password` argument multip
 
 The following command will scan a package version using a single password provided with the `--password` command-line argument.
 
-```
+```shell
 docker run --rm \
   -u $(id -u):$(id -g) \
   -v "$(pwd)/packages:/packages:ro" \
@@ -265,7 +268,7 @@ The password list file will be read by the scan process, and passwords inside it
 
 The following command will use the `password.list` file as a source for passwords during the scan process.
 
-```
+```shell
 docker run --rm \
   -u $(id -u):$(id -g) \
   -v "$(pwd)/packages:/packages:ro" \
@@ -288,7 +291,7 @@ Then you can use the `--encoded-password-list` argument or the `RLSECURE_PACKAGE
 
 The following command will scan a package version with the password list file encoded as a Base64 string.
 
-```
+```shell
 docker run --rm \
   -u $(id -u):$(id -g) \
   -v "$(pwd)/packages:/packages:ro" \
@@ -315,7 +318,7 @@ You can provide the key with the `--vault-key` argument or the `RLSECURE_VAULT_K
 The following command will use an existing rl-store with a dedicated vault to scan a password-protected file.
 The password provided with the `--password` argument will be saved to the vault and associated with the scanned package version in the rl-store.
 
-```
+```shell
 docker run --rm \
   -u $(id -u):$(id -g) \
   -v "$(pwd)/packages:/packages:ro" \
@@ -372,7 +375,7 @@ When an existing package store is used to persist the data between scans, storag
 The following command will clean all versions of a project defined by the project URL `project/package` that were scanned more than 15 days ago.
 
 
-```
+```shell
 docker run --rm \
   -u $(id -u):$(id -g) \
   -v "$(pwd)/rlstore:/rlstore" \
@@ -400,16 +403,21 @@ The `rl-prune` tool supports the following parameters.
 | `--hours-older` | Optional. Remove all versions with the last scan date older than the specified number of hours. |
 | `--message-reporter` | Optional. Use it to change the format of output messages (STDOUT) for easier integration with CI tools. Supported values: `text`, `teamcity` |
 
+
 ## Scanning files from URLs and purls
 
 ### rl-scan-url
 
-Scanning a remote HTTP or HTTPS URL can be done with the `rl-scanner` docker image using the `rl-scan-url` command.
+To scan a file from a remote HTTP or HTTPS URL with the `rl-scanner` Docker image, use the `rl-scan-url` command.
+If the URL specified in the command is valid, the command imports (automatically downloads) the software package file for analysis.
 
-example:
+In some cases, authentication may be required to download a software package file from a URL.
+For **basic authentication**, use the `--auth-user` and `--auth-pass` parameters.
+For **token-based authentication**, use the `--bearer-token` parameter.
 
-```
+The following example command will import and analyze the EXE file from the specified URL, and save analysis reports to the specified report path.
 
+```shell
 URL="https://www.7-zip.org/a/7z2500-x64.exe"
 
 docker run --rm \
@@ -423,17 +431,35 @@ docker run --rm \
             --report-path=/report
 ```
 
-When the URL requires authentication you can use either `--auth-user`, `--auth-pass` or `--bearer-token` to pass authentication information to the URL request.
+**Configuration parameters for rl-scan-url**
+
+All [configuration parameters for the `rl-scan` command](#configuration-parameters-for-rl-scan) except `--package-path` can be used with `rl-scan-url`.
+
+| Parameter        | Description |
+| --------------   | ------------ |
+| `--import-url`   | **Required.** The URL from which to download and scan the software package file. Only HTTP and HTTPS URLs are supported. If the URL is not valid or if there is no downloadable file at the specified location, the import will fail. |
+| `--auth-user`    | Optional. If basic authentication is required for downloading the software package from the specified URL, use this option to provide the username. Cannot be used with `--bearer-token`. |
+| `--auth-pass`    | Optional. If basic authentication is required for downloading the software package from the specified URL, use this option to provide the password. Cannot be used with `--bearer-token`. |
+| `--bearer-token` | Optional. If token-based authentication is required for downloading the software package from the specified URL, use this option to provide a Bearer token. Cannot be used with `--auth-user` and `--auth-pass`. |
+
 
 ### rl-scan-purl
 
-Scanning a PURL present at `secure.software` can be done with the `rl-scanner` docker image using the `rl-scan-purl` command.
-For details see the cli documentation at: [importing-files-from-urls](https://docs.secure.software/cli/commands/scan#importing-files-from-urls).
+To scan a file from a remote purl (package URL) with the `rl-scanner` Docker image, use the `rl-scan-purl` command.
+The purl must be in the format `[pkg:type/]<item>` (e.g. `pkg:nuget/mongodb.bson@2.30.0`), where `type` corresponds to one of the supported communities.
+For the full list of supported communities, consult the [official Spectra Assure documentation](https://docs.secure.software/cli/commands/scan#importing-files-from-urls).
 
-example:
+The version part of the purl is optional for all communities.
+If the version is not specified, the latest available version of the package is downloaded automatically.
+The information on available package versions is obtained from [Spectra Assure Community](https://secure.software/).
 
-```
+In some cases, authentication may be required to download a software package file from a purl.
+For **basic authentication**, use the `--auth-user` and `--auth-pass` parameters.
+For **token-based authentication**, use the `--bearer-token` parameter.
 
+The following example command will import the specified `npm` software package, and save analysis reports to the specified report path.
+
+```shell
 PURL="pkg:npm/vue"
 
 docker run --rm \
@@ -447,36 +473,59 @@ docker run --rm \
             --report-path=/report
 ```
 
-## Configuration parameters for rl-scan-url and rl-scan-purl
+**Configuration parameters for rl-scan-purl**
 
-For rl-scan-purl or rl-scan-url commands, instead of the `--package-path` parameter specify the `--import-url` or `--import-purl` parameter.
-
-All other parameters for the `rl-scan` command can be used with `rl-scan-url` or `rl-scan-purl`.
-
-- If the PURL or URL requires **basic authentication**, use the `--auth-user` and `--auth-pass` parameters.
-- If the PURL or URL requires **token-based authentication**, use the `--bearer-token` parameter.
-
-### rl-scan-url
-
-Additional parameters for `rl-scan-url`
+All [configuration parameters for the `rl-scan` command](#configuration-parameters-for-rl-scan) except `--package-path` can be used with `rl-scan-purl`.
 
 | Parameter        | Description |
 | --------------   | ------------ |
-| `--import-url`   | Mandatory. The URL to the resource you want to scan, only HTTP or HTTPS are supported. |
-| `--auth-user`    | Optional. If the URL uses `basic authentication` specicy the `user` with this parameter. Cannot be used in combination with `--bearer-token`. |
-| `--auth-pass`    | Optional. If the URL uses `basic authentication` specicy the `password` with this parameter.  Cannot be used in combination with `--bearer-token`. |
-| `--bearer-token` | Optional. If the URL uses `token authentication` specicy the `token` with this parameter. Cannot be used in combination with either `--auth--user` or `--auth-pass`. |
+| `--import-purl`  | **Required.** The purl (package URL) of the software package you want to download and scan, in the format `pkg:<type>`/<item>. Supported package types: `npm`, `gem`, `pypi`, `vsx`, `nuget`. The specified software package is downloaded from [Spectra Assure Community (secure.software)](https://secure.software/). |
+| `--auth-user`    | Optional. If basic authentication is required for downloading the software package from the specified purl, use this option to provide the username. Cannot be used with `--bearer-token`. |
+| `--auth-pass`    | Optional. If basic authentication is required for downloading the software package from the specified purl, use this option to provide the password. Cannot be used with `--bearer-token`. |
+| `--bearer-token` | Optional. If token-based authentication is required for downloading the software package from the specified purl, use this option to provide a Bearer token. Cannot be used with `--auth-user` and `--auth-pass`. |
 
-### rl-scan-purl
 
-Additional parameters for `rl-scan-purl`
+## Scanning Docker images
+
+To import and scan a remote Docker image, use the `rl-scan-docker` command.
+Docker images can be imported by specifying the purl (e.g. "pkg:docker/hello-world@latest?arch=amd64&os=linux").
+
+The following optional parameters are supported when importing Docker images: `arch` (stands for architecture) and `os` (refers to the operating system).
+If no parameters are specified, the latest available version of the package for one of the available platforms and architectures (typically the one at the top of the list) is downloaded automatically.
+All information on available versions, architectures, and platforms is obtained directly from the Docker Hub.
+
+In some cases, authentication may be required to access and download a Docker image.
+For **basic authentication**, use the `--auth-user` and `--auth-pass` parameters.
+For **token-based authentication**, use the `--bearer-token` parameter.
+
+The following example command will import and analyze the Docker image, and save analysis reports to the specified report path.
+
+```shell
+DOCKER_IMAGE="pkg:docker/hello-world@latest?arch=amd64&os=linux"
+
+docker run --rm \
+    -u $(id -u):$(id -g) \
+    -e RLSECURE_ENCODED_LICENSE \
+    -e RLSECURE_SITE_KEY \
+    -v $(pwd)/report:/report \
+    reversinglabs/rl-scanner \
+        rl-scan-docker \
+            --import-docker="${DOCKER_IMAGE}" \
+            --report-path=/report
+```
+
+
+**Configuration parameters for rl-scan-docker**
+
+All [configuration parameters for the `rl-scan` command](#configuration-parameters-for-rl-scan) except `--package-path` can be used with `rl-scan-docker`.
 
 | Parameter        | Description |
 | --------------   | ------------ |
-| `--import-purl`  | The purl (package URL) of the software package you want to download and scan, in the format `pkg:<type>`/<item>. Supported package types: `npm`, `gem`, `pypi`, `vsx`, `nuget`. The item specified will be downloaded from Spectra Assure Community (secure.software). |
-| `--auth-user`    | Optional. If the URL uses `basic authentication` specify the `user` with this parameter. Cannot be used in combination with `--bearer-token`. |
-| `--auth-pass`    | Optional. If the URL uses `basic authentication` specify the `password` with this parameter.  Cannot be used in combination with `--bearer-token`. |
-| `--bearer-token` | Optional. If the URL uses `token authentication` specicy the `token` with this parameter. Cannot be used in combination with either `--auth--user` or `--auth-pass`. |
+| `--import-docker`   | **Required.** The Docker resource you want to scan. |
+| `--auth-user`    | Optional. If basic authentication is required for accessing the Docker image, use this option to provide the username. Cannot be used with `--bearer-token`. |
+| `--auth-pass`    | Optional. If basic authentication is required for accessing the Docker image, use this option to provide the password. Cannot be used with `--bearer-token`. |
+| `--bearer-token` | Optional. If token-based authentication is required for accessing the Docker image, use this option to provide a Bearer token. Cannot be used with `--auth-user` and `--auth-pass`. |
+
 
 
 <!-- 2025-07-31; Spectra Assure CLI 3.0.0 has been released; rl-scanner v3.8.0 -->

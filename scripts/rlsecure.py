@@ -1,8 +1,5 @@
 from typing import (
-    Optional,
     Any,
-    List,
-    Tuple,
 )
 import os
 import re
@@ -37,21 +34,21 @@ __CACHE_LOCATION: str = CACHE_LOCATION
 __INSTALL_LOCATION: str = INSTALL_LOCATION
 __RLREPORT_LOCATION: str = RLREPORT_LOCATION
 __RLSTORE: str = RLSTORE
-__VAULT_KEY: Optional[str] = VAULT_KEY
+__VAULT_KEY: str | None = VAULT_KEY
 
-RlSafeFormatList: List[str] = RL_SAFE_FORMAT_LIST
+RlSafeFormatList: list[str] = RL_SAFE_FORMAT_LIST
 
 
 @dataclass
 class PkgPasswords:
-    passwords: List[str] = field(default_factory=list)
-    encoded_passwords: List[str] = field(default_factory=list)
-    password_lists: List[str] = field(default_factory=list)
+    passwords: list[str] = field(default_factory=list)
+    encoded_passwords: list[str] = field(default_factory=list)
+    password_lists: list[str] = field(default_factory=list)
 
     def empty(self) -> bool:
         return len(self.passwords) == 0 and len(self.encoded_passwords) == 0 and len(self.password_lists) == 0
 
-    def cmd_args(self) -> List[str]:
+    def cmd_args(self) -> list[str]:
         cmd = []
         cmd += [f"--password={p}" for p in self.passwords]
         cmd += [f"--password-list={p}" for p in self.password_lists]
@@ -78,7 +75,7 @@ def __executable(
     return os.path.join(__INSTALL_LOCATION, what)
 
 
-def __collect_install_args() -> List[str]:
+def __collect_install_env_args() -> list[str]:
     arg_defs = [
         ("encoded-key", "RLSECURE_ENCODED_LICENSE"),
         ("site-key", "RLSECURE_SITE_KEY"),
@@ -87,16 +84,20 @@ def __collect_install_args() -> List[str]:
         ("proxy-user", "RLSECURE_PROXY_USER"),
         ("proxy-password", "RLSECURE_PROXY_PASSWORD"),
     ]
-    args = [__collect_install_arg(a[0], a[1]) for a in arg_defs]
+    args = [__collect_install_env_arg(a[0], a[1]) for a in arg_defs]
     return [a for a in args if a is not None]
 
 
-def __collect_install_arg(
+def __collect_install_env_arg(
     arg_name: str,
     env_var_name: str,
-) -> Optional[str]:
+) -> str | None:
     env_var = os.environ.get(env_var_name)
-    return f"--{arg_name}={env_var}" if env_var is not None else None
+    if env_var is None:
+        return None
+    if len(env_var) == 0:
+        return None
+    return f"--{arg_name}={env_var}"
 
 
 def __run(
@@ -113,10 +114,7 @@ def __run(
         return arg
 
     try:
-        return subprocess.run(
-            *args,
-            **kwargs,
-        )  # pylint: disable=subprocess-run-check
+        return subprocess.run(*args, **kwargs)  # pylint: disable=W1510
     except subprocess.CalledProcessError as ex:
         raise RuntimeError(
             f'Command "{" ".join(map(sanitize_arg, *args))}" returned non-zero exit code ({ex.returncode})'
@@ -135,7 +133,7 @@ def __print_version() -> None:
 
 
 def __run_scan(
-    args: List[str],
+    args: list[str],
     **kwargs: Any,
 ) -> None:
     cmd = [
@@ -168,7 +166,7 @@ def _post_reports_copy(report_path: str) -> None:
 def _do_reports(
     purl: str,
     report_format: str,
-    diff_with: Optional[str] = None,  # diff_with
+    diff_with: str | None = None,  # diff_with
 ) -> None:
 
     cmd = [
@@ -197,11 +195,11 @@ def _do_reports(
 def _reduce_reports_to_pack(
     report_format: str,
 ) -> str:
-    a: List[str] = report_format.split(",")
+    a: list[str] = report_format.split(",")
     # split report_format on ','
     # remove all invalid items
     # return join with ','
-    b: List[str] = []
+    b: list[str] = []
     for item in a:
         if item in RlSafeFormatList:
             b.append(item)
@@ -211,7 +209,7 @@ def _reduce_reports_to_pack(
 def _do_pack_safe(
     purl: str,
     report_format: str,
-    diff_with: Optional[str] = None,
+    diff_with: str | None = None,
 ) -> None:
     pack_format = _reduce_reports_to_pack(report_format)
     cmd = [
@@ -328,7 +326,7 @@ def _vault_init(
     __VAULT_KEY = vault_key
 
 
-def _store_cmd_args() -> List[str]:
+def _store_cmd_args() -> list[str]:
     cmd = [f"--rl-store={__RLSTORE}"]
     if __VAULT_KEY is not None:
         cmd.append(f"--vault-key={__VAULT_KEY}")
@@ -344,10 +342,15 @@ def _scan_item(
 ) -> None:
     purl: str = params.purl
     replace: bool = params.replace
-    diff_with: Optional[str] = params.diff_with
+    diff_with: str | None = params.diff_with
 
     assert len(item) > 0
-    assert what in ["file", "url", "purl"]
+    assert what in [
+        "file",
+        "url",
+        "purl",
+        "docker",
+    ]
 
     args = [
         f"--purl={purl}",
@@ -372,7 +375,7 @@ def _generate_report(
     purl: str = params.purl
     report_path: str = params.report_path
     report_format: str = params.report_format
-    diff_with: Optional[str] = params.diff_with
+    diff_with: str | None = params.diff_with
     pack_safe: bool = params.pack_safe
 
     _prep_report_location()
@@ -400,7 +403,7 @@ def _generate_report(
 def _install_and_init_rlsecure(
     params: argparse.Namespace,
     reporter: Messages,
-    vault_key: Optional[str] = None,
+    vault_key: str | None = None,
 ) -> None:
     if not check_if_installed("rl-secure"):
         with reporter.progress_block("Installing rl-secure"):
@@ -425,8 +428,8 @@ def _install_and_init_rlsecure(
 
 def _init_store(
     *,
-    level: Optional[str] = None,
-    vault_key: Optional[str] = None,
+    level: str | None = None,
+    vault_key: str | None = None,
 ) -> None:
 
     os.makedirs(__RLSTORE, exist_ok=True)
@@ -452,10 +455,10 @@ def _init_store(
 
 def collect_password_info(
     params: argparse.Namespace,
-) -> Tuple[PkgPasswords, Optional[str]]:
+) -> tuple[PkgPasswords, str | None]:
 
     # collect password information
-    passwords = read_package_password_parameters(params)
+    passwords = _read_package_password_parameters(params)
     vault_key = None
 
     # if internal store is used,
@@ -481,7 +484,7 @@ def check_if_installed(what: str) -> bool:
 
 def install(
     *,
-    stream: Optional[str] = None,
+    stream: str | None = None,
 ) -> None:
     args = [
         "rl-deploy",
@@ -492,7 +495,7 @@ def install(
     if os.path.isfile(__CACHE_LOCATION):
         args.append(f"--from-cache={__CACHE_LOCATION}")
 
-    args += __collect_install_args()
+    args += __collect_install_env_args()
     if stream is not None:
         args.append(f"--stream={stream}")
 
@@ -502,7 +505,7 @@ def install(
 def use_store(
     *,
     store_path: str,
-    vault_key: Optional[str] = None,
+    vault_key: str | None = None,
 ) -> None:
     global __RLSTORE  # pylint: disable=global-statement
     __RLSTORE = store_path
@@ -517,13 +520,13 @@ def use_store(
         _init_store()
 
 
-def read_package_password_parameters(
+def _read_package_password_parameters(
     args: Any,
 ) -> PkgPasswords:
     pwds = PkgPasswords()
 
     # collect environment variables
-    def collect_pass(passwords: List[str], env_var_name: str, arg_name: str) -> None:
+    def collect_pass(passwords: list[str], env_var_name: str, arg_name: str) -> None:
         env = os.environ.get(env_var_name)
         if env is not None:
             passwords.append(env)
@@ -541,10 +544,10 @@ def read_package_password_parameters(
 def prune(
     *,
     purl: str,
-    before_date: Optional[str],
-    after_date: Optional[str],
-    days_older: Optional[int],
-    hours_older: Optional[int],
+    before_date: str | None,
+    after_date: str | None,
+    days_older: int | None,
+    hours_older: int | None,
 ) -> None:
     cmd = [
         __executable("rl-secure"),
@@ -569,11 +572,14 @@ def prune(
     __run(cmd, check=True)
 
 
-def do_init_scanfile_report_status(
+def _do_init_scan_report_status(  # pylint: disable=R0913
+    *,
     params: argparse.Namespace,
     reporter: Messages,
     passwords: PkgPasswords,
-    vault_key: Optional[str] = None,
+    what: str,
+    item: str,
+    vault_key: str | None = None,
 ) -> int:
     # VERIFY INSTALL OK
     _install_and_init_rlsecure(
@@ -584,11 +590,11 @@ def do_init_scanfile_report_status(
 
     # SCAN
     with reporter.progress_block("Scanning software package"):
-        reporter.info(f"Package path: {params.package_path}")
+        reporter.info(f"Package path: {item}")
 
         _scan_item(
-            what="file",
-            item=params.package_path,
+            what=what,
+            item=item,
             passwords=passwords,
             params=params,
         )
@@ -609,99 +615,74 @@ def do_init_scanfile_report_status(
         if should_report_result:
             if result.passed:
                 return 0
-            else:
-                return 1
+            return 1
 
     return 0
+
+
+def do_init_scanfile_report_status(
+    *,
+    params: argparse.Namespace,
+    reporter: Messages,
+    passwords: PkgPasswords,
+    vault_key: str | None = None,
+) -> int:
+    return _do_init_scan_report_status(
+        params=params,
+        reporter=reporter,
+        passwords=passwords,
+        what="file",
+        item=params.package_path,
+        vault_key=vault_key,
+    )
 
 
 def do_init_scanurl_report_status(
+    *,
     params: argparse.Namespace,
     reporter: Messages,
     passwords: PkgPasswords,
-    vault_key: Optional[str] = None,
+    vault_key: str | None = None,
 ) -> int:
-    # VERIFY INSTALL OK
-    _install_and_init_rlsecure(
-        params,
-        reporter,
-        vault_key,
+    return _do_init_scan_report_status(
+        params=params,
+        reporter=reporter,
+        passwords=passwords,
+        what="url",
+        item=params.import_url,
+        vault_key=vault_key,
     )
-
-    # SCAN
-    with reporter.progress_block("Scanning software package"):
-        reporter.info(f"Package path: {params.import_url}")
-
-        _scan_item(
-            what="url",
-            item=params.import_url,
-            passwords=passwords,
-            params=params,
-        )
-
-    # REPORT
-    # generate report
-    # testing: params.pack_safe = True
-    with reporter.progress_block("Generating report(s)"):
-        result = _generate_report(
-            params=params,
-        )
-
-        # STATUS
-        should_report_result = reporter.scan_result(
-            result.passed,
-            result.msg,
-        )
-        if should_report_result:
-            if result.passed:
-                return 0
-            else:
-                return 1
-
-    return 0
 
 
 def do_init_scanpurl_report_status(
+    *,
     params: argparse.Namespace,
     reporter: Messages,
     passwords: PkgPasswords,
-    vault_key: Optional[str] = None,
+    vault_key: str | None = None,
 ) -> int:
-    # VERIFY INSTALL OK
-    _install_and_init_rlsecure(
-        params,
-        reporter,
-        vault_key,
+    return _do_init_scan_report_status(
+        params=params,
+        reporter=reporter,
+        passwords=passwords,
+        what="purl",
+        item=params.import_purl,
+        vault_key=vault_key,
     )
 
-    # SCAN
-    with reporter.progress_block("Scanning software package"):
-        reporter.info(f"Package path: {params.import_purl}")
 
-        _scan_item(
-            what="purl",
-            item=params.import_purl,
-            passwords=passwords,
-            params=params,
-        )
-
-    # REPORT
-    # generate report
-    # testing: params.pack_safe = True
-    with reporter.progress_block("Generating report(s)"):
-        result = _generate_report(
-            params=params,
-        )
-
-        # STATUS
-        should_report_result = reporter.scan_result(
-            result.passed,
-            result.msg,
-        )
-        if should_report_result:
-            if result.passed:
-                return 0
-            else:
-                return 1
-
-    return 0
+def do_init_scandocker_report_status(
+    *,
+    params: argparse.Namespace,
+    reporter: Messages,
+    passwords: PkgPasswords,
+    vault_key: str | None = None,
+) -> int:
+    return _do_init_scan_report_status(
+        params=params,
+        reporter=reporter,
+        passwords=passwords,
+        what="docker",
+        item=params.import_docker,
+        vault_key=vault_key,
+    )

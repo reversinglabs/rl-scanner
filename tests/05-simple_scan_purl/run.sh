@@ -2,6 +2,7 @@
 set -e
 
 DOCKER_IMAGE=$1
+PURL="pkg:npm/vue"
 
 rm -rf report tmp
 mkdir -p report tmp
@@ -13,8 +14,8 @@ docker run \
     -e RLSECURE_ENCODED_LICENSE \
     -e RLSECURE_SITE_KEY \
     $DOCKER_IMAGE \
-        rl-scan-url \
-            --import-url="https://www.7-zip.org/a/7z2500-x64.exe" \
+        rl-scan-purl \
+            --import-purl="${PURL}" \
             --report-path=/report \
             --pack-safe 2>&1 | tee ./tmp/out
 

@@ -2,8 +2,8 @@ __pycache__
 .mypy_cache/
 tests/*/report/
 tests/*/tmp/
-tests/repro/store/
-tests/repro/report_base/
-tests/repro/report_repro_fail/
-tests/repro/report_repro_ok/
+tests/01-repro/store/
+tests/01-repro/report_base/
+tests/01-repro/report_repro_fail/
+tests/01-epro/report_repro_ok/
 OLD/

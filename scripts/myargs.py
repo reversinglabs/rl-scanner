@@ -116,12 +116,12 @@ def params_basic(
         help="Path to a directory where the selected reports will be saved",
     )
 
-    reportFormatList: List[str] = list(REPORT_FORMATS.keys()) + ["all"]
-    reportList = ", ".join(reportFormatList)
+    report_format_list: List[str] = list(REPORT_FORMATS.keys()) + ["all"]
+    report_list = ", ".join(report_format_list)
     parser.add_argument(
         "--report-format",
         default="all",
-        help=f"A comma-separated list of report formats to generate. Supported values: {reportList}",
+        help=f"A comma-separated list of report formats to generate. Supported values: {report_list}",
     )
     parser.add_argument(
         "--message-reporter",
@@ -177,4 +177,26 @@ def params_import_purl(
     parser.add_argument(
         "--bearer-token",
         help="specify the token, when downloading the url requires token based authentication ",
+    )
+
+
+def params_import_docker(
+    parser: argparse.ArgumentParser,
+) -> None:
+    parser.add_argument(
+        "--import-docker",
+        required=True,
+        help="The Docker package you want to scan",
+    )
+    parser.add_argument(
+        "--auth-user",
+        help="Specify the username for downloads from URLs that require basic authentication ",
+    )
+    parser.add_argument(
+        "--auth-pass",
+        help="Specify the password for downloads from URLs that require basic authentication ",
+    )
+    parser.add_argument(
+        "--bearer-token",
+        help="Specify the token for downloads from URLs that require token-based authentication ",
     )

@@ -3,9 +3,10 @@ set -e
 
 DOCKER_IMAGE=$1
 
+URL="https://hub.docker.com/layers/library/hello-world/latest/images/sha256-2771e37a12b7bcb2902456ecf3f29bf9ee11ec348e66e8eb322d9780ad7fc2df"
+
 rm -rf report tmp
 mkdir -p report tmp
-
 docker run \
     --rm \
     -u $(id -u):$(id -g) \
@@ -13,8 +14,8 @@ docker run \
     -e RLSECURE_ENCODED_LICENSE \
     -e RLSECURE_SITE_KEY \
     $DOCKER_IMAGE \
-        rl-scan-purl \
-            --import-purl="pkg:npm/vue" \
+        rl-scan-url \
+            --import-url="${URL}" \
             --report-path=/report \
             --pack-safe 2>&1 | tee ./tmp/out
 

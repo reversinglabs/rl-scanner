@@ -1,11 +1,6 @@
 import os
-from typing import (
-    Dict,
-    List,
-    Optional,
-)
 
-REPORT_FORMATS: Dict[str, str] = {  # https://docs.secure.software/api-reference/#tag/Version/operation/getVersionReport
+REPORT_FORMATS: dict[str, str] = {  # https://docs.secure.software/api-reference/#tag/Version/operation/getVersionReport
     "cyclonedx": "report.cyclonedx.json",
     "sarif": "report.sarif.json",
     "spdx": "report.spdx.json",
@@ -17,7 +12,7 @@ REPORT_FORMATS: Dict[str, str] = {  # https://docs.secure.software/api-reference
 }
 
 # not all report types are supported in pack/rl-safe
-RL_SAFE_FORMAT_LIST: List[str] = [
+RL_SAFE_FORMAT_LIST: list[str] = [
     "cyclonedx",
     "sarif",
     "spdx",
@@ -28,21 +23,30 @@ RL_SAFE_FORMAT_LIST: List[str] = [
 
 _DEV: bool = os.getenv("ENVIRONMENT", "") == "DEVELOPMENT"
 
-SCANNER_COMMANDS: List[str] = [
+SCANNER_COMMANDS: list[str] = [
     "rl-prune",
     "rl-scan",
     "rl-scan-url",
     "rl-scan-purl",
-    # "rl-scan-docker",
+    "rl-scan-docker",
 ]
 
-VALID_PURL_TYPES: List[str] = [
-    "pkg:npm/",
-    "pkg:pypi/",
-    "pkg:gem/",
-    "pkg:nuget/",
-    "pkg:vsx/",
-]
+VALID_TYPES: dict[str, list[str]] = {
+    "--import-url": [
+        "http://",
+        "https://",
+    ],
+    "--import-purl": [
+        "pkg:npm/",
+        "pkg:pypi/",
+        "pkg:gem/",
+        "pkg:nuget/",
+        "pkg:vsx/",
+    ],
+    "--import-docker": [
+        "pkg:docker/",
+    ],
+}
 
 TMP_DIR: str = "/tmp"
 
@@ -51,6 +55,6 @@ INSTALL_LOCATION: str = f"{TMP_DIR}/__rlsecure"
 RLREPORT_LOCATION: str = f"{TMP_DIR}/__rlsecure-report"
 RLSTORE: str = f"{TMP_DIR}/__rlstore"
 
-VAULT_KEY: Optional[str] = None
+VAULT_KEY: str | None = None
 
 EXIT_FATAL: int = 101

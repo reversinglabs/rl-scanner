@@ -45,10 +45,10 @@ build-with-cache:
 clean:
 	-docker rmi $(IMAGE_NAME)
 	rm -rf ./tests/*/report/
-	rm -rf ./tests/repro/store/
-	rm -rf ./tests/repro/report_base/
-	rm -rf ./tests/repro/report_repro_fail/
-	rm -rf ./tests/repro/report_repro_ok/
+	rm -rf ./tests/*repro/store/
+	rm -rf ./tests/*repro/report_base/
+	rm -rf ./tests/*repro/report_repro_fail/
+	rm -rf ./tests/*repro/report_repro_ok/
 
 format:
 	black \

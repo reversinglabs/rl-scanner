@@ -1,0 +1,91 @@
+#!/usr/bin/env python3
+
+from typing import (
+    List,
+    Tuple,
+    Optional,
+)
+
+import argparse
+import os
+import sys
+import glob
+import uuid
+from urllib.parse import (
+    urlsplit,
+    parse_qs,
+)
+from rlsecure import (
+    PkgPasswords,
+    install,
+    collect_password_info,
+    do_init_scandocker_report_status,
+)
+from cimessages import Messages
+from constants import REPORT_FORMATS
+from validators import (
+    validate_store_level_purl,
+    validate_store_diff_purl,
+    validate_purl_repro_store,
+    validate_report_path_exists_and_empty,
+    validate_import_docker,
+)
+from myargs import (
+    params_basic,
+    params_import_docker,
+    my_common_epilog,
+    my_common_prog_description,
+)
+
+
+def _my_params() -> argparse.Namespace:
+    prog: str = "rl-scan-docker"
+
+    parser = argparse.ArgumentParser(
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        prog=prog,
+        description=my_common_prog_description(prog=prog),
+        epilog=my_common_epilog(),
+    )
+
+    params_basic(
+        parser=parser,
+    )
+
+    params_import_docker(
+        parser=parser,
+    )
+
+    params = parser.parse_args()
+
+    validate_store_level_purl(params=params)
+    validate_store_diff_purl(params=params)
+    validate_purl_repro_store(params=params)
+    validate_report_path_exists_and_empty(params=params)
+    validate_import_docker(params=params)
+
+    if params.purl is None:
+        params.purl = "project/package@target"
+
+    return params
+
+
+def main() -> int:
+    params = _my_params()
+    reporter = Messages.create(params.message_reporter)
+    passwords, vault_key = collect_password_info(params)
+
+    return do_init_scandocker_report_status(
+        params=params,
+        reporter=reporter,
+        passwords=passwords,
+        vault_key=vault_key,
+    )
+
+
+if __name__ == "__main__":
+    try:
+        sys.exit(main())
+    except Exception as e:
+        print(f"Error: {str(e)}")
+        sys.exit(1)

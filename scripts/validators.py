@@ -1,6 +1,3 @@
-from typing import (
-    List,
-)
 import os
 import glob
 import argparse
@@ -9,7 +6,9 @@ from urllib.parse import (
     urlsplit,
     parse_qs,
 )
-from constants import VALID_PURL_TYPES
+from constants import (
+    VALID_TYPES,
+)
 
 
 def validate_path_is_single_file(
@@ -65,33 +64,56 @@ def validate_report_path_exists_and_empty(
         raise RuntimeError("--report-path needs to point to an empty directory")
 
 
-def validate_import_url(
+def validate_import_params(
     params: argparse.Namespace,
+    what: str,
+    my_import: str,
 ) -> None:
-    if "://" not in params.import_url:
-        raise RuntimeError("--import-url needs to be a url <proto>://<host>[:<port>]/<path>")
-
-    z = params.import_url.lower()
-    if not (z.startswith("http://") or z.startswith("https://")):
-        raise RuntimeError("--import-url '<proto>://' must be http or https")
-
-    if params.bearer_token and (params.auth_user or params.auth_pass):
-        raise RuntimeError("--bearer-token cannot be used in combination with --auth-user or --auth-pass")
-
-
-def validate_import_purl(
-    params: argparse.Namespace,
-) -> None:
-    z = params.import_purl.lower()
-    valid_start_purls: List[str] = VALID_PURL_TYPES
+    z = str(my_import).lower()
+    valid_starts: list[str] = VALID_TYPES[what]
     valid = False
-    for valid_start in valid_start_purls:
+    for valid_start in valid_starts:
         if z.startswith(valid_start):
             valid = True
             break
 
     if valid is False:
-        raise RuntimeError(f"--import purl currently supports only one of: {valid_start_purls}")
+        msg = f"{what} currently supports only one of: {valid_starts}"
+        raise RuntimeError(msg)
 
     if params.bearer_token and (params.auth_user or params.auth_pass):
-        raise RuntimeError("--bearer-token cannot be used in combination with --auth-user or --auth-pass")
+        msg = "--bearer-token cannot be used in combination with --auth-user or --auth-pass"
+        raise RuntimeError(msg)
+
+
+def validate_import_url(
+    params: argparse.Namespace,
+) -> None:
+    what = "--import-url"
+    validate_import_params(
+        params=params,
+        what=what,
+        my_import=params.import_url,
+    )
+
+
+def validate_import_purl(
+    params: argparse.Namespace,
+) -> None:
+    what = "--import-purl"
+    validate_import_params(
+        params=params,
+        what=what,
+        my_import=params.import_purl,
+    )
+
+
+def validate_import_docker(
+    params: argparse.Namespace,
+) -> None:
+    what = "--import-docker"
+    validate_import_params(
+        params=params,
+        what=what,
+        my_import=params.import_docker,
+    )

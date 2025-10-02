@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 ARG CACHE_PATH=/tmp/rl-secure.cache
-FROM rockylinux/rockylinux:9-minimal
+FROM rockylinux/rockylinux:10-minimal
 ARG CACHE_PATH
 
 COPY scripts/* /opt/rl-scanner/
@@ -27,6 +27,7 @@ RUN --mount=type=secret,id=rlsecure_license --mount=type=secret,id=rlsecure_site
     chmod 755 /opt/rl-scanner/rl-scan
     chmod 755 /opt/rl-scanner/rl-scan-url
     chmod 755 /opt/rl-scanner/rl-scan-purl
+    chmod 755 /opt/rl-scanner/rl-scan-docker
 EORUN
 
 ENV PATH="/opt/rl-scanner:${PATH}"
