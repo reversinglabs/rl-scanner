@@ -536,3 +536,5 @@ All [configuration parameters for the `rl-scan` command](#configuration-paramete
 <!-- 2025-10-02; add rl-scan-docker; rl-scanner v3.9.1 -->
 <!-- 2025-10-09; Spectra Assure CLI 3.1.1 has been released; rl-scanner v3.9.2 -->
 <!-- 2025-10-23; Spectra Assure CLI 3.1.2 has been released; rl-scanner v3.9.3 -->
+<!-- request TP: bumb to 4.0.0 not 3.10 -->
+<!-- 2025-11-05; Spectra Assure CLI 3.2.0 has been released; rlscanner v4.0.0 -->
