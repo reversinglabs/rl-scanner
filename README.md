@@ -6,12 +6,12 @@
 
 To optimize the developer experience, the image provides helper tools that wrap commonly used `rl-secure` features - scanning packages and generating analysis reports.
 
-This image is based on Rocky Linux 9.
+This image is based on Rocky Linux 10.
 
 
 ## What is rl-secure?
 
-`rl-secure` is a CLI tool that's part of the Spectra Assure platform - a new ReversingLabs solution for software supply chain security.
+`rl-secure` is a CLI tool that's part of the Spectra Assure platform - a ReversingLabs solution for software supply chain security.
 
 With `rl-secure`, you can:
 
@@ -528,13 +528,7 @@ All [configuration parameters for the `rl-scan` command](#configuration-paramete
 
 
 
-<!-- 2025-07-31; Spectra Assure CLI 3.0.0 has been released; rl-scanner v3.8.0 -->
-<!-- 2025-08-14; Spectra Assure CLI 3.0.1 has been released; rl-scanner v3.8.1 -->
-<!-- 2025-08-28; Spectra Assure CLI 3.0.2 has been released; rl-scanner v3.8.2 -->
-<!-- 2025-09-11; Spectra Assure CLI 3.0.3 has been released; rl-scanner v3.8.3 -->
-<!-- 2025-09-25; Spectra Assure CLI 3.1.0 has been released; rl-scanner v3.9.0 -->
-<!-- 2025-10-02; add rl-scan-docker; rl-scanner v3.9.1 -->
-<!-- 2025-10-09; Spectra Assure CLI 3.1.1 has been released; rl-scanner v3.9.2 -->
 <!-- 2025-10-23; Spectra Assure CLI 3.1.2 has been released; rl-scanner v3.9.3 -->
 <!-- request TP: bumb to 4.0.0 not 3.10 -->
-<!-- 2025-11-05; Spectra Assure CLI 3.2.0 has been released; rlscanner v4.0.0 -->
+<!-- 2025-11-05; Spectra Assure CLI 3.2.0 has been released; rl-scanner v4.0.0 -->
+<!-- 2025-11-13; Spectra Assure CLI 3.2.1 has been released; rl-scanner v4.0.1 -->
