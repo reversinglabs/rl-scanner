@@ -527,8 +527,6 @@ All [configuration parameters for the `rl-scan` command](#configuration-paramete
 | `--bearer-token` | Optional. If token-based authentication is required for accessing the Docker image, use this option to provide a Bearer token. Cannot be used with `--auth-user` and `--auth-pass`. |
 
 
-
-<!-- 2025-10-23; Spectra Assure CLI 3.1.2 has been released; rl-scanner v3.9.3 -->
-<!-- request TP: bumb to 4.0.0 not 3.10 -->
 <!-- 2025-11-05; Spectra Assure CLI 3.2.0 has been released; rl-scanner v4.0.0 -->
 <!-- 2025-11-13; Spectra Assure CLI 3.2.1 has been released; rl-scanner v4.0.1 -->
+<!-- 2025-11-20; Spectra Assure CLI 3.2.2 has been released; rl-scanner v4.0.2 -->
