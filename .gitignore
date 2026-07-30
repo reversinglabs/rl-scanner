@@ -7,3 +7,4 @@ tests/01-repro/report_base/
 tests/01-repro/report_repro_fail/
 tests/01-epro/report_repro_ok/
 OLD/
+vtmp/

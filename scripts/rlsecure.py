@@ -1,42 +1,34 @@
-from typing import (
-    Any,
-)
+import argparse
+import glob
 import os
 import re
-import glob
-import uuid
 import shutil
 import subprocess
-import argparse
-from pathlib import Path
-from urllib.parse import (
-    urlsplit,
-    parse_qs,
-    urlunsplit,
-    urlencode,
-    SplitResult,
-)
+import uuid
 from dataclasses import (
     dataclass,
     field,
 )
+from pathlib import Path
+from typing import (
+    Any,
+)
+from urllib.parse import (
+    SplitResult,
+    parse_qs,
+    urlencode,
+    urlsplit,
+    urlunsplit,
+)
+
+from cimessages import Messages
 from constants import (
-    RL_SAFE_FORMAT_LIST,
     CACHE_LOCATION,
     INSTALL_LOCATION,
+    RL_SAFE_FORMAT_LIST,
     RLREPORT_LOCATION,
-    RLSTORE,
-    VAULT_KEY,
+    TMP_DIR,
 )
-from cimessages import Messages
-
-__CACHE_LOCATION: str = CACHE_LOCATION
-__INSTALL_LOCATION: str = INSTALL_LOCATION
-__RLREPORT_LOCATION: str = RLREPORT_LOCATION
-__RLSTORE: str = RLSTORE
-__VAULT_KEY: str | None = VAULT_KEY
-
-RlSafeFormatList: list[str] = RL_SAFE_FORMAT_LIST
 
 
 @dataclass
@@ -62,6 +54,99 @@ class ScanResult:  # pylint: disable=too-few-public-methods
         self.msg = msg
 
 
+# ----------------------------------------------------
+# globals start
+_rl_store_: str = f"{TMP_DIR}/__rlstore"  # initial
+_vault_key_: str | None = None  # initial no key
+
+
+def get_store() -> str:
+    return _rl_store_
+
+
+def set_store(store_path: str) -> None:
+    global _rl_store_
+
+    if not os.path.isdir(store_path):
+        raise RuntimeError(f"'{store_path}' is not a directory")
+
+    _rl_store_ = store_path
+
+
+def get_vault_key() -> str | None:
+    return _vault_key_
+
+
+def set_vault_key_if_present(vault_key: str | None = None) -> None:
+    global _vault_key_
+    if vault_key:
+        _vault_key_ = vault_key
+
+
+# globals end
+# ----------------------------------------------------
+
+
+def _rl_secure_init(store: str, level: int | None = None) -> None:
+    cmd: list[str] = [
+        __executable("rl-secure"),
+        "init",
+        f"--rl-store={store}",
+    ]
+
+    if level is not None:  # can be 0 - 4
+        cmd.append(f"--rl-level={level}")
+
+    __run(cmd, check=True)
+
+
+def _rl_secure_vault_init(store: str, vault_key: str) -> None:
+    cmd: list[str] = [
+        __executable("rl-secure"),
+        "vault",
+        "init",
+        f"--rl-store={store}",
+        f"--vault-key={vault_key}",
+    ]
+
+    __run(cmd, check=True)
+
+
+def _install_and_init_rlsecure(
+    params: argparse.Namespace,
+    reporter: Messages,
+    vault_key: str | None = None,
+) -> None:
+    set_vault_key_if_present(vault_key)
+
+    # allways first install rl-secure if we dont have it yet
+    if not check_if_installed("rl-secure"):
+        with reporter.progress_block("Installing rl-secure"):
+            install(stream=params.stream)
+
+    # use the specified store when specified
+    if params.rl_store:
+        set_store(params.rl_store)
+
+    store = get_store()
+    vault_key = get_vault_key()
+
+    # if the store was not initialized or does not exist at all init one
+    if not os.path.isdir(os.path.join(store, ".rl-secure")):
+        with reporter.progress_block("Initializing rl-secure store"):
+            level: int | None = None
+            if getattr(params, "rl_level", None) is not None:
+                level = params.rl_level
+
+            os.makedirs(store, exist_ok=True)
+            if not __is_empty_dir(store):
+                raise RuntimeError(f"'{store}' is not an empty directory")
+
+            _rl_secure_init(store, level)
+            if vault_key:
+                _rl_secure_vault_init(store, vault_key)
+
+
 def __is_empty_dir(
     path: str,
 ) -> bool:
@@ -71,8 +156,12 @@ def __is_empty_dir(
 def __executable(
     what: str = "rl-secure",
 ) -> str:
-    assert what in ["rl-secure", "rl-safe"]
-    return os.path.join(__INSTALL_LOCATION, what)
+    valid_what = ["rl-secure", "rl-safe"]
+    if what not in valid_what:
+        msg = f"{what} is not supported; valid is: {valid_what}"
+        raise RuntimeError(msg)
+
+    return os.path.join(INSTALL_LOCATION, what)
 
 
 def __collect_install_env_args() -> list[str]:
@@ -100,31 +189,53 @@ def __collect_install_env_arg(
     return f"--{arg_name}={env_var}"
 
 
+BLOCK_LIST: list[str] = [
+    "--vault-key=",
+    "--password=",
+    "--encoded-list=",
+    "--encoded-key=",
+    "--proxy-password=",
+    "--site-key=",
+    "--auth-pass=",
+    "--bearer-token=",
+]
+
+
+def _sanitize_args(args: list[str]) -> list[str]:
+    return [_sanitize_arg(a) for a in args]
+
+
+def _sanitize_arg(arg: str) -> str:
+    for item in BLOCK_LIST:
+        if arg.startswith(item):
+            return f"{item}***"
+    return arg
+
+
 def __run(
-    *args: Any,
+    args: list[str],
     **kwargs: Any,
-) -> Any:
-    def sanitize_arg(arg: str) -> str:
-        if arg.startswith("--vault-key="):
-            return "--vault-key=***"
-        if arg.startswith("--password="):
-            return "--password=***"
-        if arg.startswith("--encoded-list="):
-            return "--encoded-list=***"
-        return arg
+) -> subprocess.CompletedProcess[str]:
+    clean: list[str] = _sanitize_args(args)
+    feedback = " ".join(clean)
+
+    kwargs.setdefault("timeout", 3600 * 5)
+    kwargs.setdefault("encoding", "utf-8")
 
     try:
-        return subprocess.run(*args, **kwargs)  # pylint: disable=W1510
+        return subprocess.run(args, **kwargs)
+
     except subprocess.CalledProcessError as ex:
-        raise RuntimeError(
-            f'Command "{" ".join(map(sanitize_arg, *args))}" returned non-zero exit code ({ex.returncode})'
-        ) from ex
+        msg = f'Command "{feedback}" returned non-zero exit code ({ex.returncode})'
+        raise RuntimeError(msg) from None
+
     except Exception as ex:
-        raise RuntimeError(f'{str(ex)} while executing "{" ".join(map(sanitize_arg, *args))}"') from ex
+        msg = f'{str(ex)} while executing command "{feedback}"'
+        raise RuntimeError(msg) from None
 
 
 def __print_version() -> None:
-    args = [
+    args: list[str] = [
         __executable("rl-secure"),
         "--version",
     ]
@@ -136,28 +247,33 @@ def __run_scan(
     args: list[str],
     **kwargs: Any,
 ) -> None:
-    cmd = [
+    store = get_store()
+
+    cmd: list[str] = [
         __executable("rl-secure"),
         "scan",
         "--no-tracking",
-    ] + _store_cmd_args()
+        f"--rl-store={store}",
+    ]
+
+    vault_key = get_vault_key()
+    if vault_key:
+        cmd.append(f"--vault-key={vault_key}")
 
     __run(cmd + args, **kwargs)
-
     __print_version()
 
 
 def _prep_report_location() -> None:
-    shutil.rmtree(__RLREPORT_LOCATION, ignore_errors=True)
-    os.makedirs(__RLREPORT_LOCATION, exist_ok=True)
+    shutil.rmtree(RLREPORT_LOCATION, ignore_errors=True)
+    os.makedirs(RLREPORT_LOCATION, exist_ok=True)
 
 
 def _post_reports_copy(report_path: str) -> None:
-
     # copy report to desired location
     os.makedirs(report_path, exist_ok=True)
     shutil.copytree(
-        src=__RLREPORT_LOCATION,
+        src=RLREPORT_LOCATION,
         dst=report_path,
         dirs_exist_ok=True,
     )
@@ -168,26 +284,27 @@ def _do_reports(
     report_format: str,
     diff_with: str | None = None,  # diff_with
 ) -> None:
+    store = get_store()
 
-    cmd = [
+    cmd: list[str] = [
         __executable("rl-secure"),
         "report",
         report_format,
         "--no-tracking",
         f"--purl={purl}",
-        f"--rl-store={__RLSTORE}",
-        f"--output-path={__RLREPORT_LOCATION}",
+        f"--rl-store={store}",
+        f"--output-path={RLREPORT_LOCATION}",
     ]
     if diff_with is not None:
         cmd.append(f"--diff-with={diff_with}")
 
     __run(cmd, check=True)
 
-    for report_dir in glob.iglob(os.path.join(__RLREPORT_LOCATION, "rl-html-diff-with-*")):
+    for report_dir in glob.iglob(os.path.join(RLREPORT_LOCATION, "rl-html-diff-with-*")):
         if os.path.isdir(report_dir):
             os.rename(
                 report_dir,
-                os.path.join(__RLREPORT_LOCATION, "rl-html"),
+                os.path.join(RLREPORT_LOCATION, "rl-html"),
             )
             break
 
@@ -201,7 +318,7 @@ def _reduce_reports_to_pack(
     # return join with ','
     b: list[str] = []
     for item in a:
-        if item in RlSafeFormatList:
+        if item in RL_SAFE_FORMAT_LIST:
             b.append(item)
     return ",".join(b)
 
@@ -212,15 +329,20 @@ def _do_pack_safe(
     diff_with: str | None = None,
 ) -> None:
     pack_format = _reduce_reports_to_pack(report_format)
-    cmd = [
+    # pack_format could be empty list
+    store = get_store()
+
+    cmd: list[str] = [
         __executable("rl-safe"),
         "pack",
         f"--purl={purl}",
-        f"--rl-store={__RLSTORE}",
-        f"--format={pack_format}",
-        f"--output-path={__RLREPORT_LOCATION}",
+        f"--rl-store={store}",
+        f"--output-path={RLREPORT_LOCATION}",
         "--no-tracking",
     ]
+    if len(pack_format):
+        cmd.append(f"--format={pack_format}")
+
     if diff_with is not None:
         cmd.append(f"--diff-with={diff_with}")
 
@@ -231,19 +353,20 @@ def _do_status(
     purl: str,
 ) -> ScanResult:
     # normal scan
-    cmd = [
+    store = get_store()
+
+    cmd: list[str] = [
         __executable("rl-secure"),
         "status",
         "--return-status",
         "--no-color",
         f"--purl={purl}",
-        f"--rl-store={__RLSTORE}",
+        f"--rl-store={store}",
     ]
 
     status = __run(
         cmd,
         stdout=subprocess.PIPE,
-        encoding="utf-8",
     )
 
     if status.returncode == 0:
@@ -254,50 +377,72 @@ def _do_status(
         return ScanResult(False, msg.group(1) if msg is not None else "rl-secure analysis: failed")
 
     status.check_returncode()  # raise exception
-    assert False  # to get rid of mypy no return code
+    raise AssertionError("false")  # to get rid of mypy no return code
 
 
 def _do_checks(
     purl: str,
 ) -> ScanResult:
-    # repro scan
     def make_base_purl(purl: str) -> str:
         elements = urlsplit(purl)
+
         query = parse_qs(elements.query)
-        del query["build"]
+        if "build" in query:
+            del query["build"]
+
         return urlunsplit(
-            SplitResult(
+            SplitResult(  # SplitResult(scheme, netloc, path, query, fragment)
                 elements.scheme,
                 elements.netloc,
                 elements.path,
-                urlencode(query),
+                urlencode(query, doseq=True),
                 elements.fragment,
             )
         )
 
     base_purl = make_base_purl(purl)
-    cmd = [
+    store = get_store()
+
+    cmd: list[str] = [
         __executable("rl-secure"),
         "checks",
         "--return-status",
         "--no-color",
         f"--purl={base_purl}",
-        f"--rl-store={__RLSTORE}",
+        f"--rl-store={store}",
     ]
+
     status = __run(
         cmd,
         stdout=subprocess.PIPE,
-        encoding="utf-8",
     )
 
-    if status.returncode == 3:
-        return ScanResult(False, "reproducible build check: failed")
+    # https://docs.secure.software/cli/commands/checks
+    # Every check type is assigned a label that shows the status information (pass or fail) for the check.
+    # The first two characters in the label are used to distinguish between check types:
+    # L(n) - software package analysis with SAFE Levels enabled
+    # CI - software package analysis with SAFE Levels disabled
+    # C(n) - software package analysis with custom SAFE Levels
+    # DF - comparison (diff) between package version artifacts
+    # RB - reproducible build check
+    #
+    # Return status as exit code.
+    # This is useful when working with CI/CD.
+    # The following exit codes are supported:
+    # 0 - PASS,
+    # 1 - CI:FAIL,
+    # 2 - DF:FAIL,
+    # 3 - RB:FAIL
 
-    if status.returncode >= 0:
+    code = status.returncode
+    if code == 0:
         return ScanResult(True, "reproducible build check: passed")
 
+    if code in [1, 2, 3]:
+        return ScanResult(False, "reproducible build check: failed")
+
     status.check_returncode()  # raise exception
-    assert False  # to get rid of mypy no return code
+    raise AssertionError("false")  # to get rid of mypy no return code
 
 
 def _do_scan_results(purl: str) -> ScanResult:
@@ -311,55 +456,40 @@ def _do_scan_results(purl: str) -> ScanResult:
     return _do_checks(purl)
 
 
-def _vault_init(
-    vault_key: str,
-) -> None:
-    cmd = [
-        __executable("rl-secure"),
-        "vault",
-        "init",
-        f"--vault-key={vault_key}",
-    ] + _store_cmd_args()
-    __run(cmd, check=True)
-
-    global __VAULT_KEY  # pylint: disable=global-statement
-    __VAULT_KEY = vault_key
-
-
-def _store_cmd_args() -> list[str]:
-    cmd = [f"--rl-store={__RLSTORE}"]
-    if __VAULT_KEY is not None:
-        cmd.append(f"--vault-key={__VAULT_KEY}")
-    return cmd
-
-
 def _scan_item(
     *,
-    what: str,  # file, url, purl, later: docker
+    what: str,
     item: str,
     passwords: PkgPasswords,
     params: argparse.Namespace,
 ) -> None:
-    purl: str = params.purl
-    replace: bool = params.replace
-    diff_with: str | None = params.diff_with
+    valid_what = ["file", "url", "purl", "docker"]
 
-    assert len(item) > 0
-    assert what in [
-        "file",
-        "url",
-        "purl",
-        "docker",
-    ]
+    if what not in valid_what:
+        msg = f"{what} is not supported; valid is: {valid_what}"
+        raise RuntimeError(msg)
+
+    if len(item) == 0:
+        msg = f"{what}: item provided has length 0"
+        raise RuntimeError(msg)
 
     args = [
-        f"--purl={purl}",
-        f"--file-path={item}",
+        f"--purl={params.purl}",  # is purl, not the item we are scanning but the purl we will store the results under
+        f"--file-path={item}",  # hint: is correct for file, url, purl and docker args
     ]
 
-    if replace:
+    if what != "file":
+        if getattr(params, "bearer_token", None):
+            args += [f"--bearer-token={params.bearer_token}"]
+        if getattr(params, "auth_user", None):
+            args += [f"--auth-user={params.auth_user}"]
+        if getattr(params, "auth_pass", None):
+            args += [f"--auth-pass={params.auth_pass}"]
+
+    if params.replace:
         args.append("--replace")
 
+    diff_with: str | None = params.diff_with
     if diff_with is not None:
         args.append(f"--sync-with={diff_with}")
 
@@ -400,135 +530,19 @@ def _generate_report(
     return _do_scan_results(purl)
 
 
-def _install_and_init_rlsecure(
-    params: argparse.Namespace,
-    reporter: Messages,
-    vault_key: str | None = None,
-) -> None:
-    if not check_if_installed("rl-secure"):
-        with reporter.progress_block("Installing rl-secure"):
-            install(
-                stream=params.stream,
-            )
-
-    # set rl-store
-    if params.rl_store is not None:
-        use_store(
-            store_path=params.rl_store,
-        )
-        return
-
-    # initialize temporary store
-    with reporter.progress_block("Initializing rl-secure store"):
-        _init_store(
-            level=params.rl_level,
-            vault_key=vault_key,
-        )
-
-
-def _init_store(
-    *,
-    level: str | None = None,
-    vault_key: str | None = None,
-) -> None:
-
-    os.makedirs(__RLSTORE, exist_ok=True)
-    if not __is_empty_dir(__RLSTORE):
-        raise RuntimeError(f"'{__RLSTORE}' is not an empty directory")
-
-    cmd = [
-        __executable("rl-secure"),
-        "init",
-    ] + _store_cmd_args()
-
-    if level is not None:
-        cmd.append(f"--rl-level={level}")
-
-    __run(cmd, check=True)
-
-    if vault_key is not None:
-        _vault_init(vault_key)
-
-
-# PUBLIC
-
-
-def collect_password_info(
-    params: argparse.Namespace,
-) -> tuple[PkgPasswords, str | None]:
-
-    # collect password information
-    passwords = _read_package_password_parameters(params)
-    vault_key = None
-
-    # if internal store is used,
-    # we can use fixed vault password since store is temporary
-    if params.rl_store is None:
-        vault_key = str(uuid.uuid4())
-    else:
-        if os.environ.get("RLSECURE_VAULT_KEY") is not None:
-            vault_key = os.environ.get("RLSECURE_VAULT_KEY")
-
-        if params.vault_key is not None:
-            vault_key = params.vault_key
-
-    if not passwords.empty() and vault_key is None:
-        raise RuntimeError("vault key should be specified if package password is used")
-
-    return passwords, vault_key
-
-
-def check_if_installed(what: str) -> bool:
-    return os.access(__executable(what=what), os.X_OK)
-
-
-def install(
-    *,
-    stream: str | None = None,
-) -> None:
-    args = [
-        "rl-deploy",
-        "install",
-        __INSTALL_LOCATION,
-        "--no-tracking",
-    ]
-    if os.path.isfile(__CACHE_LOCATION):
-        args.append(f"--from-cache={__CACHE_LOCATION}")
-
-    args += __collect_install_env_args()
-    if stream is not None:
-        args.append(f"--stream={stream}")
-
-    __run(args, check=True)
-
-
-def use_store(
-    *,
-    store_path: str,
-    vault_key: str | None = None,
-) -> None:
-    global __RLSTORE  # pylint: disable=global-statement
-    __RLSTORE = store_path
-
-    global __VAULT_KEY  # pylint: disable=global-statement
-    __VAULT_KEY = vault_key
-
-    if not os.path.isdir(__RLSTORE):
-        raise RuntimeError(f"'{__RLSTORE}' is not a directory")
-
-    if not os.path.isdir(os.path.join(__RLSTORE, ".rl-secure")):
-        _init_store()
-
-
 def _read_package_password_parameters(
     args: Any,
 ) -> PkgPasswords:
     pwds = PkgPasswords()
 
     # collect environment variables
-    def collect_pass(passwords: list[str], env_var_name: str, arg_name: str) -> None:
+    def collect_pass(
+        passwords: list[str],
+        env_var_name: str,
+        arg_name: str,
+    ) -> None:
         env = os.environ.get(env_var_name)
-        if env is not None:
+        if env is not None and len(env) > 0:
             passwords.append(env)
         arg = getattr(args, arg_name, [])
         if arg is not None and len(arg) > 0:
@@ -541,44 +555,13 @@ def _read_package_password_parameters(
     return pwds
 
 
-def prune(
-    *,
-    purl: str,
-    before_date: str | None,
-    after_date: str | None,
-    days_older: int | None,
-    hours_older: int | None,
-) -> None:
-    cmd = [
-        __executable("rl-secure"),
-        "prune",
-        "--silent",
-        f"--rl-store={__RLSTORE}",
-        f"--purl={purl}",
-    ]
-
-    if before_date is not None:
-        cmd.append(f"--before-date={before_date}")
-
-    if after_date is not None:
-        cmd.append(f"--after-date={after_date}")
-
-    if days_older is not None:
-        cmd.append(f"--days-older={days_older}")
-
-    if hours_older is not None:
-        cmd.append(f"--hours-older={hours_older}")
-
-    __run(cmd, check=True)
-
-
 def _do_init_scan_report_status(  # pylint: disable=R0913
     *,
     params: argparse.Namespace,
     reporter: Messages,
     passwords: PkgPasswords,
     what: str,
-    item: str,
+    item: str,  # item is a file, a url, a purl or a docker url
     vault_key: str | None = None,
 ) -> int:
     # VERIFY INSTALL OK
@@ -618,6 +601,92 @@ def _do_init_scan_report_status(  # pylint: disable=R0913
             return 1
 
     return 0
+
+
+# PUBLIC
+
+
+def collect_password_info(
+    params: argparse.Namespace,
+) -> tuple[PkgPasswords, str | None]:
+
+    # collect password information
+    passwords = _read_package_password_parameters(params)
+    vault_key = None
+
+    # if internal store is used,
+    # we can not use fixed vault password since store is temporary
+    if params.rl_store is None:
+        vault_key = str(uuid.uuid4())
+    else:
+        if os.environ.get("RLSECURE_VAULT_KEY") is not None:
+            vault_key = os.environ.get("RLSECURE_VAULT_KEY")
+
+        if params.vault_key is not None:
+            vault_key = params.vault_key
+
+    if not passwords.empty() and vault_key is None:
+        raise RuntimeError("vault key should be specified if package password is used")
+
+    return passwords, vault_key
+
+
+def check_if_installed(what: str) -> bool:
+    return os.access(__executable(what=what), os.X_OK)
+
+
+def install(
+    *,
+    stream: str | None = None,
+) -> None:
+    args: list[str] = [
+        "rl-deploy",
+        "install",
+        INSTALL_LOCATION,
+        "--no-tracking",
+    ]
+    if os.path.isfile(CACHE_LOCATION):
+        args.append(f"--from-cache={CACHE_LOCATION}")
+
+    args += __collect_install_env_args()
+    if stream is not None:
+        args.append(f"--stream={stream}")
+
+    __run(args, check=True)
+
+
+def prune(
+    *,
+    purl: str,
+    before_date: str | None,
+    after_date: str | None,
+    days_older: int | None,
+    hours_older: int | None,
+) -> None:
+    # vault key not mentioned in documentation: https://docs.secure.software/cli/commands/prune
+    store = get_store()
+
+    cmd: list[str] = [
+        __executable("rl-secure"),
+        "prune",
+        "--silent",
+        f"--rl-store={store}",
+        f"--purl={purl}",
+    ]
+
+    if before_date is not None:
+        cmd.append(f"--before-date={before_date}")
+
+    if after_date is not None:
+        cmd.append(f"--after-date={after_date}")
+
+    if days_older is not None:
+        cmd.append(f"--days-older={days_older}")
+
+    if hours_older is not None:
+        cmd.append(f"--hours-older={hours_older}")
+
+    __run(cmd, check=True)
 
 
 def do_init_scanfile_report_status(

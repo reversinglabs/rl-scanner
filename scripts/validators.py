@@ -1,25 +1,37 @@
-import os
-import glob
 import argparse
-
+import glob
+import os
+import re
 from urllib.parse import (
-    urlsplit,
     parse_qs,
+    urlsplit,
 )
-from constants import (
-    VALID_TYPES,
-)
+
+# https://docs.secure.software/cli/commands/scan#importing-files-from-urls
+# npm: pkg:npm/react
+# PyPI: pkg:pypi/pyaudio
+# RubyGems: pkg:gem/CFPropertyList
+# NuGet: pkg:nuget/mongodb.bson@2.30.0
+# VS Code: pkg:vsx/redhat/vscode-yaml@1.13.0
+# PS Gallery: pkg:psgallery/aws.tools.cloudwatch
+# HuggingFace (Supported only in rl-secure CLI)	pkg:huggingface/gemma-3-270m-it@main
 
 
 def validate_path_is_single_file(
     package_path: str,
 ) -> str:
     files = glob.glob(package_path, recursive=True)
+
     if len(files) > 1:
-        raise RuntimeError(f'Path spec "{package_path}" resolves to more than one file!')
+        raise RuntimeError(f"Path spec '{package_path}' resolves to more than one file!")
+
     if len(files) < 1:
-        raise RuntimeError(f'Path spec "{package_path}" doesn\'t resolve to any file!')
-    return files[0]
+        raise RuntimeError(f"Path spec '{package_path}' does not resolve to any file!")
+
+    file: str = files[0]
+    if os.path.isfile(file):
+        return file
+    raise RuntimeError(f"Path spec '{package_path}' does not resolve to a file!")
 
 
 def validate_store_level_purl(
@@ -64,26 +76,55 @@ def validate_report_path_exists_and_empty(
         raise RuntimeError("--report-path needs to point to an empty directory")
 
 
-def validate_import_params(
+def validate_auth(
     params: argparse.Namespace,
-    what: str,
-    my_import: str,
 ) -> None:
-    z = str(my_import).lower()
-    valid_starts: list[str] = VALID_TYPES[what]
-    valid = False
-    for valid_start in valid_starts:
-        if z.startswith(valid_start):
-            valid = True
-            break
-
-    if valid is False:
-        msg = f"{what} currently supports only one of: {valid_starts}"
-        raise RuntimeError(msg)
-
     if params.bearer_token and (params.auth_user or params.auth_pass):
         msg = "--bearer-token cannot be used in combination with --auth-user or --auth-pass"
         raise RuntimeError(msg)
+
+
+VALID_PARAMS: dict[str, dict[str, dict[str, str]]] = {
+    "ALLOW": {
+        "--import-url": {
+            r"^https?://": "only http and https are currently supported",
+        },
+        "--import-docker": {
+            r"^pkg:docker/": "only pkg:docker is supported",
+        },
+        "--import-purl": {
+            r"^pkg:\w+/": "any pkg: except docker is supported",
+            # unsupported ecosystems now fail at the scanner rather than at the CLI
+        },
+    },
+    "DENY": {
+        "--import-purl": {
+            r"^pkg:docker/": "pkg:docker is not supported for --import-purl",
+        },
+    },
+}
+
+
+def validate_import_params(
+    what: str,
+    my_import: str,
+) -> None:
+    z = str(my_import).lower()  # we explicitly match lower as we are looking for the beginning only
+    allow: dict[str, str] = VALID_PARAMS["ALLOW"].get(what, {})
+    if allow:
+        for k, v in allow.items():
+            result = re.findall(k, z)
+            if result == []:
+                msg = f"{what} {v}"
+                raise RuntimeError(msg)
+
+    deny: dict[str, str] = VALID_PARAMS["DENY"].get(what, {})
+    if deny:
+        for k, v in deny.items():
+            result = re.findall(k, z)
+            if result != []:
+                msg = f"{what} {v}"
+                raise RuntimeError(msg)
 
 
 def validate_import_url(
@@ -91,10 +132,10 @@ def validate_import_url(
 ) -> None:
     what = "--import-url"
     validate_import_params(
-        params=params,
         what=what,
         my_import=params.import_url,
     )
+    validate_auth(params=params)
 
 
 def validate_import_purl(
@@ -102,10 +143,10 @@ def validate_import_purl(
 ) -> None:
     what = "--import-purl"
     validate_import_params(
-        params=params,
         what=what,
         my_import=params.import_purl,
     )
+    validate_auth(params=params)
 
 
 def validate_import_docker(
@@ -113,7 +154,7 @@ def validate_import_docker(
 ) -> None:
     what = "--import-docker"
     validate_import_params(
-        params=params,
         what=what,
         my_import=params.import_docker,
     )
+    validate_auth(params=params)

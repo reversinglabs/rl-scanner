@@ -1,6 +1,3 @@
-from typing import (
-    List,
-)
 import argparse
 
 from constants import REPORT_FORMATS
@@ -21,14 +18,16 @@ def my_common_epilog() -> str:
     return "\n".join(
         [
             "Environment variables:",
-            "  RLSECURE_ENCODED_LICENSE - Base64 encoded license file contents",
-            "  RLSECURE_SITE_KEY        - Site activation key for licensing",
+            "  RLSECURE_ENCODED_LICENSE  - Base64 encoded license file contents",
+            "  RLSECURE_SITE_KEY         - Site activation key for licensing",
             "  RLSECURE_VAULT_KEY        - Password vault key",
             "  RLSECURE_PACKAGE_PASSWORD - Password used to scan package",
-            "  RLSECURE_PROXY_SERVER    - Server URL for local proxy",
-            "  RLSECURE_PROXY_PORT      - Network port for local proxy",
-            "  RLSECURE_PROXY_USER      - User name for proxy authentication",
-            "  RLSECURE_PROXY_PASSWORD  - Password for proxy authentication",
+            "  RLSECURE_PROXY_SERVER     - Server URL for local proxy",
+            "  RLSECURE_PROXY_PORT       - Network port for local proxy",
+            "  RLSECURE_PROXY_USER       - User name for proxy authentication",
+            "  RLSECURE_PROXY_PASSWORD   - Password for proxy authentication",
+            "  RLSECURE_PACKAGE_PASSWORD_LIST",
+            "  RLSECURE_PACKAGE_ENCODED_LIST",
         ]
     )
 
@@ -36,12 +35,12 @@ def my_common_epilog() -> str:
 def my_simple_epilog() -> str:
     return "\n".join(
         [
-            "Environment variables:"
-            "  RLSECURE_ENCODED_LICENSE - Base64 encoded license file contents"
-            "  RLSECURE_SITE_KEY        - Site activation key for licensing"
-            "  RLSECURE_PROXY_SERVER    - Server URL for local proxy"
-            "  RLSECURE_PROXY_PORT      - Network port for local proxy"
-            "  RLSECURE_PROXY_USER      - User name for proxy authentication"
+            "Environment variables:",
+            "  RLSECURE_ENCODED_LICENSE - Base64 encoded license file contents",
+            "  RLSECURE_SITE_KEY        - Site activation key for licensing",
+            "  RLSECURE_PROXY_SERVER    - Server URL for local proxy",
+            "  RLSECURE_PROXY_PORT      - Network port for local proxy",
+            "  RLSECURE_PROXY_USER      - User name for proxy authentication",
             "  RLSECURE_PROXY_PASSWORD  - Password for proxy authentication",
         ],
     )
@@ -107,6 +106,8 @@ def params_basic(
     )
     parser.add_argument(
         "--rl-level",
+        type=int,
+        choices=range(0, 5),  # https://docs.secure.software/cli/commands/init
         required=False,
         help="Specifies the rl-level used for the selected package scanning",
     )
@@ -116,7 +117,7 @@ def params_basic(
         help="Path to a directory where the selected reports will be saved",
     )
 
-    report_format_list: List[str] = list(REPORT_FORMATS.keys()) + ["all"]
+    report_format_list: list[str] = list(REPORT_FORMATS.keys()) + ["all"]
     report_list = ", ".join(report_format_list)
     parser.add_argument(
         "--report-format",

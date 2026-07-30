@@ -31,30 +31,11 @@ SCANNER_COMMANDS: list[str] = [
     "rl-scan-docker",
 ]
 
-VALID_TYPES: dict[str, list[str]] = {
-    "--import-url": [
-        "http://",
-        "https://",
-    ],
-    "--import-purl": [
-        "pkg:npm/",
-        "pkg:pypi/",
-        "pkg:gem/",
-        "pkg:nuget/",
-        "pkg:vsx/",
-    ],
-    "--import-docker": [
-        "pkg:docker/",
-    ],
-}
 
 TMP_DIR: str = "/tmp"
 
 CACHE_LOCATION: str = f"{TMP_DIR}/rl-secure.cache"
 INSTALL_LOCATION: str = f"{TMP_DIR}/__rlsecure"
 RLREPORT_LOCATION: str = f"{TMP_DIR}/__rlsecure-report"
-RLSTORE: str = f"{TMP_DIR}/__rlstore"
-
-VAULT_KEY: str | None = None
 
 EXIT_FATAL: int = 101
