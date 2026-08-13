@@ -533,3 +533,4 @@ All [configuration parameters for the `rl-scan` command](#configuration-paramete
 <!-- 2026-07-02; Spectra Assure CLI 3.5.3 has been released; rl-scanner v4.3.3 -->
 <!-- 2026-07-16; Spectra Assure CLI 3.5.4 has been released; rl-scanner v4.3.4 -->
 <!-- 2026-07-30; Spectra Assure CLI 3.5.5 has been released; rl-scanner v4.3.5 -->
+<!-- 2026-08-13; Spectra Assure CLI 3.5.6 has been released; rl-scanner v4.3.6 -->
