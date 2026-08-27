@@ -107,7 +107,8 @@ def params_basic(
     parser.add_argument(
         "--rl-level",
         type=int,
-        choices=range(0, 5),  # https://docs.secure.software/cli/commands/init
+        choices=range(0, 6),
+        # https://docs.secure.software/cli/commands/init, default = 5 0 switches off, so range 0,6 means [0,1,2,3,4,5]
         required=False,
         help="Specifies the rl-level used for the selected package scanning",
     )

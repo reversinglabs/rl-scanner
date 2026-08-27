@@ -36,7 +36,7 @@ docker run \
             --package-path=/package/repro_ok.tgz \
             --report-path=/report
 
-python - << 'END_PYTHON'
+python3 - << 'END_PYTHON'
 import os.path
 exitVal = 0
 expectedFiles = [

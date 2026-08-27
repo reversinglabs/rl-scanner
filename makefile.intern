@@ -1,3 +1,5 @@
+SHELL = /bin/bash
+
 # for local dev/test setup read the licence and key from a file if not already in the environment
 LIC_FILE	:=	~/.envfile_rl-scanner.docker
 

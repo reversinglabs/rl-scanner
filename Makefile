@@ -1,5 +1,5 @@
 # Makefile: keep tabs
-SHELL := /bin/bash -l
+SHELL := /bin/bash
 export SHELL
 
 VENV := ./vtmp/

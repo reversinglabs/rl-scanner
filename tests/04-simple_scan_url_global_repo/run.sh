@@ -18,7 +18,7 @@ docker run \
             --report-path=/report \
             --pack-safe 2>&1 | tee ./tmp/out
 
-python - << 'END_PYTHON'
+python3 - << 'END_PYTHON'
 import os.path
 exitVal = 0
 expectedFiles = [
